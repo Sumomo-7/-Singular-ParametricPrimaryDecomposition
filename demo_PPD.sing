@@ -1,4 +1,5 @@
 LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/PARAprimdec.lib";
+LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/NABESHIMAcgs.lib";
 
 option(redSB);
 option(noredefine);
