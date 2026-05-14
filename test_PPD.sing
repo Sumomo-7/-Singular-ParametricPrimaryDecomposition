@@ -1,0 +1,67 @@
+LIB "polylib.lib";
+option(redSB);
+option(noredefine);
+ring RingAll = 0, (x, y, a, b), (dp(2), dp);
+
+ideal F= x4 + y4 - ax2, ax2y + y3 + bx2;
+ideal Q1 = x2, y3;
+ideal Q2 = x2+(-a)*y2+(-b)*y+(-a), (a2+1)*y3+(2ab)*y2+(a2+b2)*y+(ab);
+ideal N = (a5+a3), (2a3b+2ab), (a2+1);
+
+list Of = y, x2+(-a)*y2+(-b)*y+(-a);
+
+//点(a, b) = (2, 2)を考える。Nを特化しても0になるものはない。Ofの多項式を特化しても既約のまま
+list point = 0, 0;
+ideal sigmaF = substitute(F, a, point[1], b, point[2]);
+ideal sigmaQ1 = substitute(Q1, a, point[1], b, point[2]);
+ideal sigmaQ2 = substitute(Q2, a, point[1], b, point[2]);
+
+print("sigmaOf");
+poly sigmaf = substitute(Of[2], a, point[1], b, point[2]);
+sigmaf;
+print("and its factorization:");
+factorize(sigmaf, 1);
+
+print("GB of sigmaF:");
+groebner(sigmaF);
+print("GB of intersection:");
+groebner(intersect(sigmaQ1, sigmaQ2));
+
+//一般的なrandom tester
+print("---------RANDOM TESTING---------");
+int i;
+for(i=1; i<=10; i++){
+    list randomPts = random(-50, 50), random(-50, 50);
+    print("TESTING AT POINT (" + string(randomPts[1]) + ", " + string(randomPts[2]) + ") ");
+    ideal sigmaF = substitute(F, a, randomPts[1], b, randomPts[2]);
+    ideal sigmaQ1 = substitute(Q1, a, randomPts[1], b, randomPts[2]);
+    ideal sigmaQ2 = substitute(Q2, a, randomPts[1], b, randomPts[2]);
+
+    print("sigmaOf");
+    poly sigmaf = substitute(Of[2], a, randomPts[1], b, randomPts[2]);
+    sigmaf;
+
+    if(size(factorize(sigmaf, 1))>1){
+        print("Of[2] is NOT irreducible after specialization at point (" + string(randomPts[1]) + ", " + string(randomPts[2]) + ") ");
+        factorize(sigmaf, 1);
+    }else{
+        print("Of[2] is irreducible after specialization at point (" + string(randomPts[1]) + ", " + string(randomPts[2]) + ") ");
+        factorize(sigmaf, 1);
+        
+        print("GB of sigmaF:");
+        ideal sigmaF_GB = groebner(sigmaF);
+        sigmaF_GB;
+        print("GB of intersection:");
+        ideal sigmaINT_GB = groebner(intersect(sigmaQ1, sigmaQ2));
+        sigmaINT_GB;
+
+        if(sigmaF_GB[1]==sigmaINT_GB[1]){
+            print("MATCHED");
+        }else{
+            print("NOT MATCHED");
+        }
+    }
+}
+
+//Ofが既約でない ⇔ 準素分解でない となる点を取って
+exit;

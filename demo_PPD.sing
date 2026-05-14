@@ -1,0 +1,39 @@
+LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/PARAprimdec.lib";
+
+option(redSB);
+option(noredefine);
+
+////Parametric Primary Decomposition////
+ring RingAll = 0, (x, y, a, b), (dp(2), dp);
+ring RingVar = (0, a, b), (x, y), dp;
+
+ideal F = x4 + y4 - ax2, ax2y + y3 + bx2;
+list Paras = a, b;
+list Vars = x, y;
+list Indet = x, y, a, b;
+paraprimdec(F, Paras, Vars, Indet, RingVar, RingAll);
+
+// ring RingAll = 0, (x, a, b), (dp(1), dp);
+// ring RingVar = (0, a, b), x, dp;
+
+// ideal F = ax + b;
+// list Paras = a, b;
+// list Vars = x;
+// list Indet = x, a, b;
+////////////////////////////////////////
+
+
+///Comprehensive Groebner System///
+// ring RingVar = (0, a, b), (x, y), dp;
+// ring RingAll = 0, (x, y, a, b), (dp(2), dp);
+
+// ideal E = 0;
+// list N = 1;
+// ideal F = x4 + y4 - ax2, ax2y + y3 + bx2;
+// list Paras = a, b;
+// list Vars = x, y;
+// list Indet = x, y, a, b;
+
+// idealcgs(E, N, F, Paras, Vars, RingVar, RingAll);
+
+exit;

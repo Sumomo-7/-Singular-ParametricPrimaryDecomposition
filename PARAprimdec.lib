@@ -1,0 +1,392 @@
+LIB "primdec.lib";
+LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/NABESHIMAcgs.lib";
+
+static proc list2string(list L){
+    //数学的な意味を持たない。
+    int i;
+    string s = "";
+
+    for(i=1; i<=size(L); i++){
+        if(i>1){
+            s = s + ",";
+        }
+        s = s + string(L[i]);
+    }
+    return(s);
+}
+
+static proc makering1(string ringName, list XUX, list AUA, list U){
+    //makering関数は全員数学的に大した意味を持たない。ただSingularでの環創成がlistに弱いのでその迂回策
+    //ring ringName = 0, (XUX, AUA, U), (dp(size(XUX)), dp(size(AUA)), dp(size(U)));
+    string sX = list2string(XUX);
+    string sA = list2string(AUA);
+    string sU = list2string(U);
+
+    string allvars = "";
+
+    if(size(XUX)>0){
+        allvars = sX;
+    }
+
+    if(size(AUA)>0){
+        if(size(allvars)>0){
+            allvars = allvars + ",";
+        }
+        allvars = allvars + sA;
+    }
+
+    if(size(U)>0){
+        if(size(allvars)>0){
+            allvars = allvars + ",";
+        }
+        allvars = allvars + sU;
+    }
+
+    string Ord = "(";
+
+    if(size(XUX)>0){
+        Ord = Ord + "dp(" + string(size(XUX)) + ")";
+    }
+
+    if(size(AUA)>0){
+        if(Ord != "("){
+            Ord = Ord + ",";
+        }
+
+        Ord = Ord + "dp(" + string(size(AUA)) + ")";
+    }
+
+    if(size(U)>0){
+        if(Ord != "("){
+            Ord = Ord + ",";
+        }
+        Ord = Ord + "dp(" + string(size(U)) + ")";
+    }
+
+    Ord = Ord + ")";
+
+    string cmd ="ring " + ringName + " = 0,(" + allvars + ")," + Ord + ";";
+    
+    return(cmd);
+}
+
+static proc makering1lp(string ringName, list XUX, list AUA, list U){
+    //ring ringName = 0, (XUX, AUA, U), (lp(size(XUX)), lp(size(AUA)), lp(size(U)));
+    string sX = list2string(XUX);
+    string sA = list2string(AUA);
+    string sU = list2string(U);
+
+    string allvars = "";
+
+    if(size(XUX)>0){
+        allvars = sX;
+    }
+
+    if(size(AUA)>0){
+        if(size(allvars)>0){
+            allvars = allvars + ",";
+        }
+        allvars = allvars + sA;
+    }
+
+    if(size(U)>0){
+        if(size(allvars)>0){
+            allvars = allvars + ",";
+        }
+        allvars = allvars + sU;
+    }
+
+    string Ord = "(";
+
+    if(size(XUX)>0){
+        Ord = Ord + "lp(" + string(size(XUX)) + ")";
+    }
+
+    if(size(AUA)>0){
+        if(Ord != "("){
+            Ord = Ord + ",";
+        }
+
+        Ord = Ord + "lp(" + string(size(AUA)) + ")";
+    }
+
+    if(size(U)>0){
+        if(Ord != "("){
+            Ord = Ord + ",";
+        }
+        Ord = Ord + "lp(" + string(size(U)) + ")";
+    }
+
+    Ord = Ord + ")";
+
+    string cmd ="ring " + ringName + " = 0,(" + allvars + ")," + Ord + ";";
+    
+    return(cmd);
+}
+
+static proc makering2(string ringName, list XUX, list AUA, list U){
+    //ring ringName = (0, U), (XUX, AUA), (dp(size(XUX)), dp(size(AUA)));
+    string sX = list2string(XUX);
+    string sA = list2string(AUA);
+    string sU = list2string(U);
+
+    string vars = "";
+
+    if(size(XUX)>0){
+        vars = sX;
+    }
+
+    if(size(AUA)>0){
+        if(size(vars)>0){
+            vars = vars + ",";
+        }
+
+        vars = vars + sA;
+    }
+
+    string ord = "(";
+
+    if(size(XUX)>0){
+        ord = ord + "dp(" + string(size(XUX)) + ")";
+    }
+
+    if(size(AUA)>0){
+        if(ord != "("){
+            ord = ord + ",";
+        }
+
+        ord = ord + "dp(" + string(size(AUA)) + ")";
+    }
+
+    ord = ord + ")";
+
+    string cmd =
+        "ring " + ringName
+        + " = (0,"
+        + "(" + sU + ")),"
+        + "(" + vars + "),"
+        + ord
+        + ";";
+
+    return(cmd);
+}
+
+static proc makering3(string ringName, list XUX, list AUA, list U){
+    //ring ringName = (0, AUA, U), XUX, dp;
+    string sX = list2string(XUX);
+    string sA = list2string(AUA);
+    string sU = list2string(U);
+
+    string params = "";
+
+    if(size(AUA)>0){
+        params = sA;
+    }
+
+    if(size(U)>0){
+        if(size(params)>0){
+            params = params + ",";
+        }
+
+        params = params + sU;
+    }
+
+    string cmd =
+        "ring " + ringName
+        + " = (0,"
+        + "(" + params + ")),"
+        + "(" + sX + "),dp;";
+
+    return(cmd);
+}
+
+
+proc ext_shape(ideal varP){
+    //K[A, X]上の素イデアルPが与えられるとする。
+    //list Varが変数とパラメータリスト{X, A}である。
+    //事前に最小変数VMinDPolyと多項式環RingAllがexportされているとする。
+    //[Y.Ishihara, K.Yokoyama]Lemma12, Remark8によるshape form(とgeneric minimal polynomial)の計算
+    setring(RingAll);
+    ideal P = imap(RingVar, varP);
+    list Var = imap(RingVar, Indeterminates);
+    int i;
+
+    intvec U = indepSet(P);
+    list XUX, AUA, varU;
+
+    for (i = 1; i <= size(U); i++){
+        if (U[i] == 0){
+            if (Var[i] < VMinDPoly_all){
+                AUA[size(AUA)+1] = Var[i];
+            }
+            else{
+                XUX[size(XUX)+1] = Var[i];
+            }
+        }else{
+            varU[size(varU)+1] = Var[i];
+        }
+    }
+    poly tempXr = XUX[size(XUX)];
+
+    string Cmd = makering1lp("RingShape", XUX, AUA, varU);
+    execute(Cmd);
+    poly Xr = imap(RingAll, tempXr);
+
+    ideal P_ext = imap(RingAll, P);
+    //これでPがK(AUA,varU)[XUX]へ拡大されたと考えられる。
+    ideal G = std(P_ext);
+    //［優先度低い］ほとんどの場合このGroebner基底がそのままShape formになるが、まれにそうでもなく、線形変換が必要になることがある。その対応が必要である。
+    //対応法として、[野呂・横山]アルゴリズム4.9, 4.30などを参照。Lex順序に関するGroebner基底がShape formでない場合、ランダムに線形変数変換を施した後、独立に最小多項式を求めて、そのminimal polynomialでShape formが求まる。この場合Groebner基底w.r.t.lpで一気に両方を出すことは無理。
+    list PQ_shape;
+    poly f_shape;
+
+    for(i=1; i<=size(G); i++){
+        if(variables(G[i])[1] != Xr){
+            PQ_shape[size(PQ_shape)+1] = G[i];
+        }else{
+            f_shape = G[i];
+        }
+    }
+    int flag = 0;
+    if(size(PQ_shape)){
+        flag = 1;
+    }
+
+    setring(RingVar);
+    
+    poly lcPlcQ = 1;
+    if(flag){
+        list PQ = imap(RingShape, PQ_shape);
+    }else{
+        list PQ = list();
+    }
+    poly f = imap(RingShape, f_shape);
+
+    for(i=1; i<=size(PQ); i++){
+        lcPlcQ = lcPlcQ * leadcoef(PQ[i]);
+        if(PQ[i]-lead(PQ[i]) != 0){
+            //そのままq_i == 0 になることもあるから、0がかけられたら困るのでIF文を入れる。
+            lcPlcQ = lcPlcQ * leadcoef(PQ[i]-lead(PQ[i]));
+        }
+    }
+    return(lcPlcQ, f);
+}
+
+proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def RingAll){
+    //イデアルFがRingVarの下で与えられたと仮定する。
+    option(redSB);
+    option(noredefine);
+    int i, j;
+
+    list Parameters = Paras;
+    list Variables = Vars;
+    list Indeterminates = Indet;
+    poly VMinDPoly = Vars[size(Vars)];
+
+    export(Parameters, Variables, Indeterminates, VMinDPoly);
+    export(RingVar, RingAll);
+
+    setring(RingVar);
+
+    list Z = list();
+
+    ideal G = std(F);
+    list PD = primdecSY(G);
+    list N = list();
+
+    //準素成分Q_iの先頭係数積を集める。Gの先頭係数がこれらに含まれるはずなので別に集める必要はない。
+    for(i=1; i<=size(PD); i++){
+        poly h = 1;
+        for(j=1; j<=size(PD[i][1]); j++){
+            h = h * leadcoef(PD[i][1][j]);
+        }
+        if(h != 1){
+            N[size(N)+1] = h;
+        }
+    }
+
+    setring(RingAll);
+    poly VMinDPoly_all = imap(RingVar, VMinDPoly);
+    export(VMinDPoly_all);
+
+    ideal F_all = imap(RingVar, F);
+    ideal G_all = imap(RingVar, G);
+    poly h_all = imap(RingVar, h);
+    
+    //S \intersect K[A]の計算
+    ideal S = quotient(F_all, G_all);
+
+    list SA;
+    for (i=1; i<=size(S); i++){
+        if(S[i]<VMinDPoly_all){
+            SA[size(SA)+1] = S[i];
+        }
+    }
+    //list J1：拡大されたPのShape formのパラメータ部分の積、list J2：Pの先頭係数積の計算、Of：K[A, X]上の既約多項式集合、efficient HITにて特化イデアルの準素判定に登場
+    setring(RingVar);
+
+    list J1, J2;
+    list Of;
+    for(i=1; i<=size(PD); i++){//Q_iの先頭項も併せてここで入れた方が効率的かも、再帰呼び出しを簡単にするためあえて別々でする。
+        ideal P = PD[i][2];
+        poly h = 1;
+        for(j=1; j<=size(P); j++){
+            h = h * leadcoef(P[j]);
+        }
+        if(h != 1){
+            J2[size(J2)+1] = h;
+        }
+        J1[size(J1)+1], Of[size(Of)+1] = ext_shape(P);
+    }
+    ideal E = 0;
+    //Conbine list SA_var, list J1, J2, list N={h1, ..., hm}, note that elements in {h1, ..., hm} + SA_var will be used in the next step of computing CGS. 
+    list SA_var = imap(RingAll, SA);
+    for(i=1; i<=size(SA_var); i++){
+        if(SA_var[i] != 1){
+            N[size(N)+1] = SA_var[i];
+        }
+    }
+
+    int m = size(N);
+    //再帰呼び出しではN[1]~N[m]を呼び出す。
+
+    list J;
+    poly tempf = 1;
+    for(i=1; i<=size(J1); i++){
+        tempf = tempf * J1[i];
+    }
+    J[size(J)+1] = tempf;
+
+    poly tempf = 1;
+    for(i=1; i<=size(J2); i++){
+        tempf = tempf * J2[i];
+    }
+    J[size(J)+1] = tempf;
+
+    for(i=1; i<=size(J); i++){
+        if(J[i] != 1){
+            int not_redundant = 1;
+            for(j=1; j<=size(N); j++){
+                if(N[j] == J[i]){
+                    not_redundant = 0;
+                    break;
+                }
+            }
+            if(not_redundant){
+                N[size(N)+1] = J[i];
+            }
+        }
+    }
+    
+    Z[size(Z)+1] = list(PD, E, N, Of);
+
+    // for(i=1; i<=m; i++){
+    //     list CGS = idealcgs_main();
+    //     //idealcgsはRingAll上のものを返す。その整合性を保て。
+    //     for(j=1; j<=size(CGS); j++){
+    //         Z[size(Z)+1] = PPD_main();
+    //     }
+    // }
+
+    return(Z);
+}
