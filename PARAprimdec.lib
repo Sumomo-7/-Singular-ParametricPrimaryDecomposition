@@ -1,5 +1,4 @@
 LIB "primdec.lib";
-LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/NABESHIMAcgs.lib";
 
 static proc list2string(list L){
     //数学的な意味を持たない。
@@ -216,7 +215,7 @@ proc ext_shape(ideal varP){
 
     for (i = 1; i <= size(U); i++){
         if (U[i] == 0){
-            if (Var[i] < VMinDPoly_all){
+            if (Var[i] < VMinDPoly){
                 AUA[size(AUA)+1] = Var[i];
             }
             else{
@@ -277,16 +276,15 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
     option(redSB);
     option(noredefine);
     int i, j;
-
+    
     list Parameters = Paras;
     list Variables = Vars;
     list Indeterminates = Indet;
-    poly VMinDPoly = Vars[size(Vars)];
+    poly VMinDPoly_var = Vars[size(Vars)];
+    list Checks = 0, 0, 0, 0, 0, 0;
 
-    export(Parameters, Variables, Indeterminates, VMinDPoly);
+    export(Parameters, Variables, Indeterminates, VMinDPoly_var, Checks);
     export(RingVar, RingAll);
-
-    setring(RingVar);
 
     list Z = list();
 
@@ -306,8 +304,8 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
     }
 
     setring(RingAll);
-    poly VMinDPoly_all = imap(RingVar, VMinDPoly);
-    export(VMinDPoly_all);
+    poly VMinDPoly = imap(RingVar, VMinDPoly_var);
+    export(VMinDPoly, Checks);
 
     ideal F_all = imap(RingVar, F);
     ideal G_all = imap(RingVar, G);
@@ -318,7 +316,7 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
 
     list SA;
     for (i=1; i<=size(S); i++){
-        if(S[i]<VMinDPoly_all){
+        if(S[i]<VMinDPoly){
             SA[size(SA)+1] = S[i];
         }
     }
@@ -380,13 +378,320 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
     
     Z[size(Z)+1] = list(PD, E, N, Of);
 
-    // for(i=1; i<=m; i++){
-    //     list CGS = idealcgs_main();
-    //     //idealcgsはRingAll上のものを返す。その整合性を保て。
-    //     for(j=1; j<=size(CGS); j++){
-    //         Z[size(Z)+1] = PPD_main();
-    //     }
-    // }
+    for(i=1; i<=m; i++){
+        poly temph = N[i];
 
+        setring(RingAll);
+        ideal cgsE = imap(RingVar, temph);
+        list cgsN = imap(RingVar, N);
+        cgsN = delete(cgsN, i);
+        ideal cgsF = imap(RingVar, F);
+
+        list CGS = idealcgs_main(cgsE, cgsN, cgsF);
+        //idealcgsはRingAll上のものを返す。その整合性を保て。
+        for(j=1; j<=size(CGS); j++){
+            Z[size(Z)+1] = PPD_main();
+        }
+    }
+    setring(RingVar);
     return(Z);
+}
+
+/////Comprehensive Groebner System/////
+static proc Radical_Equ(ideal Equ){
+//From KSW. Eの元を因数分解して無平方化しただけ。できるだけ遅いとされる根基を避けている本アルゴリズムでは初手で根基を計算するわけがない。
+    if (size(Equ) == 0){
+        return(Equ);
+  }
+  ideal SqrEqu;
+  list EquFactors;
+  poly tempP;
+  int i, j, flag;
+  
+  for (i = 1; i <= size(Equ); i++){
+    
+    EquFactors = factorize(Equ[i], 2);
+
+    flag = 0;
+    for (j = 1; j <= size(EquFactors[2]); j++){
+      if (EquFactors[2][j] > 1){
+        flag = 1;
+        break;
+      }
+    }
+    if (flag){
+      tempP = 1;
+      for (j = 1; j <= size(EquFactors[1]); j++){
+        tempP = tempP * EquFactors[1][j];
+      }
+      SqrEqu = SqrEqu + tempP;
+    }
+  }
+
+  if (size(SqrEqu)){
+    return(std(Equ + SqrEqu));
+  }
+  else{
+    return(Equ);
+  }
+}
+
+static proc Simplify_DisEqu(list DisEqu, ideal Equ){
+    //From KSW. Nを因数分解してEでそれらを簡約化した。Simplifyというより矛盾する条件を事前に取り除いている。
+    list newDisEqu;
+    ideal DisFactors;
+    poly tempP;
+    int i, j, k, flag;
+
+    for (i = 1; i <= size(DisEqu); i++){
+        DisFactors = factorize(DisEqu[i], 1);
+        for (j = 1; j <= size(DisFactors); j++){
+            if (size(Equ)){
+                tempP = reduce(DisFactors[j], Equ);
+            }else{
+                tempP = DisFactors[j];
+            }
+            if (leadmonom(tempP) != 1){
+                flag = 1;
+                for (k = 1; k <= size(newDisEqu); k++){
+                    if (newDisEqu[k] == tempP){
+                        flag = 0;
+                        break;
+                    }
+                }
+                if (flag){
+                    newDisEqu[size(newDisEqu)+1] = tempP;
+                }
+            }
+        }
+    }
+    return(newDisEqu);
+}
+
+static proc Simplify_Equ(ideal Equ, list DisEqu){
+    //From KSW. 余計にエラーを引き起こす可能性がある？？？：EをNの簡単な形を持つ元、i.e. 次数が3以下か単項式の数が5以下のもので簡約する。
+    if (size(Equ) == 0){
+        return(Equ);
+    }
+    if (Equ[1] == 1){
+        return(Equ);
+    }
+    ideal newEqu, tempGB;
+    int i, j;
+    
+    newEqu = Equ;
+
+    for (i = 1; i <= size(DisEqu); i++){
+        if ((deg(DisEqu[i]) > 3) || (size(DisEqu[i]) > 5)){
+            i++;
+            continue;
+        }
+
+        tempGB = std(newEqu + (DisEqu[i] * VMinDPoly - 1));
+        if (tempGB[1] == 1){
+            return(ideal(1)); //may incur error
+        }
+
+        newEqu = ideal();
+
+        for (j = 1; j <= size(tempGB); j++){
+            if (VMinDPoly > tempGB[j]){
+                newEqu = newEqu + tempGB[j];
+            }
+        }
+    }
+    return(std(newEqu));
+}
+
+//Checks=[total, tri-check, 0dim-check, c-check, i-check, gen-check];
+proc Check_Consistence(ideal Equ, list DisEqu){
+    //From KSW. KSWアルゴリズムの真骨頂
+    Checks[1] = Checks[1] + 1;
+    //trivial checks
+    if (!size(Equ)){
+        Checks[2] = Checks[2] + 1;
+        return(1);
+    }
+    if (Equ[1] == 1){
+        Checks[2] = Checks[2] + 1;
+        return(0);
+    }
+    if (!size(DisEqu)){
+        Checks[2] = Checks[2] + 1;
+        return(1);
+    }
+    //normal form
+    poly DE = 1;
+    int i, j;
+    
+    for (i = 1; i <= size(DisEqu); i++){
+        DE = reduce(DE * DisEqu[i], Equ);
+        if (DE == 0){
+            //Nの一部がEに含まれることになるのでこの部分が必ず同時に「0になる」と「0にならない」ことが要求されて矛盾
+            Checks[2] = Checks[2] + 1;
+            return(0);
+        }
+    }
+    //c-check
+    int ctimes = 1;
+    ideal LM;
+
+    for (i = 1; i <= size(Equ); i++){
+        LM = LM + leadmonom(Equ[i]);
+    }
+    LM = std(LM);
+    intvec Indvec = indepSet(LM);
+    
+    list Indvar;
+    for (i = size(Variables) + 1; i <= size(Indvec); i++){
+        if (Indvec[i] != 0){
+            Indvar = Indvar + list(Parameters[i - size(Variables)]);
+        }
+    }
+
+    ideal tempGB, Spe;
+
+    if (size(Indvar)){
+        for (i = 1; i <= ctimes; i++){
+            for (j = 1; j <= size(Indvar); j++){
+                Spe = Spe + (Indvar[j] - random(-50, 50));
+                //例えば(10, 20, 30)でパラメータ(a, b, c)を特化したいならば、イデアル<a-10, b-20, c-30>とEの和イデアルのGroebner基底を求めるといい。
+            }
+            
+            tempGB = std(Equ + Spe + (DE * VMinDPoly - 1));
+
+            if (tempGB[1] != 1){
+                Checks[4] = Checks[4] + 1;
+	        return(1);
+            }
+        }
+    }
+    //i-check
+    int itimes = 3;
+    poly newDE = DE;
+    poly res, tempDE;
+    tempGB = std(Equ);
+    for (i = 1; i <= itimes; i++){
+        if (size(newDE) > 20){
+            break;
+        }
+        res = 0;
+        tempDE = newDE;
+        for (j = 1; j <= size(newDE); j++){
+            res = res + reduce(lead(tempDE) * newDE, tempGB);
+            tempDE = tempDE - lead(tempDE);
+        }
+        if (res == 0){
+            Checks[5] = Checks[5] + 1;
+            return(0);
+        }
+        newDE = res;
+    }
+
+
+  //general check
+    tempGB = std(Equ + (DE * VMinDPoly - 1));
+    if (tempGB[1] == 1){
+        Checks[6] = Checks[6] + 1;
+        return(0);
+    }else{
+        Checks[6] = Checks[6] + 1;
+        return(1);
+    }
+}
+
+proc idealcgs_main(ideal E, list N, ideal F){
+    int i;
+    ideal new_E = std(E);
+    new_E = Radical_Equ(new_E);
+    list new_N = Simplify_DisEqu(N, new_E);
+    new_E = Simplify_Equ(new_E, new_N);
+    //KSWのSによると、Simplify_Equがエラーを引き起こす可能性あるらしい。
+
+    if (!Check_Consistence(new_E, new_N)){
+        return(list());
+    }
+
+    ideal G = std(F + new_E);
+
+    if (G[1] == 1){
+        return(list(list(new_E, new_N, ideal(1))));
+    }
+
+    list Z = list();
+
+    ideal GB;
+    for(i = 1; i <= size(G); i++){
+        if(G[i] > VMinDPoly){
+            GB[size(GB)+1] = G[i];
+        }
+    }
+
+    if (size(GB) == 0){
+        return(list(list(new_E, new_N, ideal(0))));
+    }
+
+    ideal Gm;
+    poly LCoefs;
+    Gm, LCoefs = MDBasis(GB);
+    list LCFactors;
+    ideal tempLCFactors = factorize(LCoefs, 1);
+    for(i=1; i<=size(tempLCFactors); i++){
+        LCFactors[size(LCFactors)+1] = tempLCFactors[i];
+    }
+
+    if(Check_Consistence(new_E, new_N + LCFactors)){
+        Z[size(Z)+1] = list(new_E, new_N + LCFactors, Gm);
+    }
+
+    list tempN = new_N;
+    for(i = 1; i <= size(LCFactors); i++){
+        ideal tempE = new_E;
+        tempE[size(tempE)+1] = LCFactors[i];
+        Z = Z + idealcgs_main(tempE, tempN, G);
+
+        tempN[size(tempN)+1] = LCFactors[i];
+    }
+    return(Z);
+}
+
+proc MDBasis(G){
+    int i, j, k, redundant;
+
+    setring(RingVar);
+    ideal G = imap(RingAll, G);
+    poly LCoefs = 1;
+
+    ideal lm_G;
+    for(i=1; i<=size(G); i++){
+        lm_G[size(lm_G)+1] = leadmonom(G[i]);
+        LCoefs = LCoefs*leadcoef(G[i]);
+    }
+
+    setring(RingAll);
+    ideal lm_G = imap(RingVar, lm_G);
+    lm_G = std(lm_G);
+
+    setring(RingVar);
+    ideal lm_G = imap(RingAll, lm_G);
+
+    ideal basis;
+    for (i=1; i<=size(G); i++){
+        for(j=1; j<=size(lm_G); j++){
+            if(leadmonom(G[i]) == lm_G[j]){
+                redundant = 0;
+                for(k=1; k<=size(basis); k++){
+                    if(leadmonom(basis[k]) == leadmonom(G[i])){
+                        redundant = 1;
+                        break;
+                    }
+                }
+                if(redundant == 0){
+                    basis[size(basis)+1] = G[i];
+                }
+            }
+        }
+    }
+    setring(RingAll);
+    return(imap(RingVar, basis), imap(RingVar, LCoefs));
 }
