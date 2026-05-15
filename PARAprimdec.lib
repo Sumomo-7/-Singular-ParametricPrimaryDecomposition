@@ -314,8 +314,6 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
 
     ideal G = std(F);
     list PD = primdecSY(G);
-    print("PD in paraprimdec");
-    PD;
     list N = list();
 
     //準素成分Q_iの先頭係数積を集める。Gの先頭係数がこれらに含まれるはずなので別に集める必要はない。
@@ -424,7 +422,6 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
         ideal cgsF = imap(RingVar, F);
 
         list CGS = idealcgs_main(cgsE, cgsN, cgsF);
-        CGS;
         if(size(CGS) != 0){
             for(j=1; j<=size(CGS); j++){
                 ideal tempG, tempE;
@@ -452,7 +449,6 @@ proc ppd_main(ideal E, list N, ideal G){
     list Z = list();
 
     list PD = primdecSY(G);
-    PD;
     if(size(PD)==1){
         poly zerocheck = PD[1][1][1];
         if(zerocheck == 0){
