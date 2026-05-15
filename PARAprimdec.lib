@@ -208,23 +208,47 @@ proc ext_shape(ideal varP){
     setring(RingAll);
     ideal P = imap(RingVar, varP);
     list Var = imap(RingVar, Indeterminates);
-    int i;
+    int i, j;
 
     intvec U = indepSet(P);
     list XUX, AUA, varU;
-
-    for (i = 1; i <= size(U); i++){
-        if (U[i] == 0){
-            if (Var[i] < VMinDPoly){
-                AUA[size(AUA)+1] = Var[i];
+    for (j = 1; j <= size(U); j++){
+        if (U[j] == 0){
+            if (Var[j] < VMinDPoly){
+                AUA[size(AUA)+1] = Var[j];
             }
             else{
-                XUX[size(XUX)+1] = Var[i];
+                XUX[size(XUX)+1] = Var[j];
             }
         }else{
-            varU[size(varU)+1] = Var[i];
+            varU[size(varU)+1] = Var[j];
         }
     }
+    if(size(XUX) == 0){
+        XUX, AUA, varU = list(), list(), list();
+        list U_candidate = indepSet(P, 0);
+        for(i=1; i<=size(U_candidate); i++){
+            U = U_candidate[i];
+            for (j = 1; j <= size(U); j++){
+                if (U[j] == 0){
+                    if (Var[j] < VMinDPoly){
+                        AUA[size(AUA)+1] = Var[j];
+                    }
+                    else{
+                        XUX[size(XUX)+1] = Var[j];
+                    }
+                }else{
+                    varU[size(varU)+1] = Var[j];
+                }
+            }
+            if(size(XUX) != 0){
+                break;
+            }else{
+                XUX, AUA, varU = list(), list(), list();
+            }
+        }
+    }
+
     poly tempXr = XUX[size(XUX)];
 
     string Cmd = makering1lp("RingShape", XUX, AUA, varU);
@@ -234,8 +258,8 @@ proc ext_shape(ideal varP){
     ideal P_ext = imap(RingAll, P);
     //これでPがK(AUA,varU)[XUX]へ拡大されたと考えられる。
     ideal G = std(P_ext);
-    //［優先度低い］ほとんどの場合このGroebner基底がそのままShape formになるが、まれにそうでもなく、線形変換が必要になることがある。その対応が必要である。
-    //対応法として、[野呂・横山]アルゴリズム4.9, 4.30などを参照。Lex順序に関するGroebner基底がShape formでない場合、ランダムに線形変数変換を施した後、独立に最小多項式を求めて、そのminimal polynomialでShape formが求まる。この場合Groebner基底w.r.t.lpで一気に両方を出すことは無理。
+    //［優先度低い］ほとんどの場合このGroebner基底がそのままShape formになるが、まれにそうでもなく、線形変換が必要になることがあり、対策を講じる必要である。
+    //対応法として、[野呂・横山 - グレブナー基底の計算 基礎編]アルゴリズム4.9, 4.30などを参照されたい。Lex順序に関するGroebner基底がShape formでない場合、ランダムに線形変数変換を施した後、独立に最小多項式を求めて、そのminimal polynomialでShape formが求まる。ただしこの場合Groebner基底w.r.t.lpで一気に両方を出すことは無理である。
     list PQ_shape;
     poly f_shape;
 
@@ -290,6 +314,8 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
 
     ideal G = std(F);
     list PD = primdecSY(G);
+    print("PD in paraprimdec");
+    PD;
     list N = list();
 
     //準素成分Q_iの先頭係数積を集める。Gの先頭係数がこれらに含まれるはずなので別に集める必要はない。
@@ -304,7 +330,10 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
     }
 
     setring(RingAll);
+    list Variables_all = imap(RingVar, Variables);
+    list Parameters_all = imap(RingVar, Parameters);
     poly VMinDPoly = imap(RingVar, VMinDPoly_var);
+    export(Variables_all, Parameters_all);
     export(VMinDPoly, Checks);
 
     ideal F_all = imap(RingVar, F);
@@ -315,9 +344,11 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
     ideal S = quotient(F_all, G_all);
 
     list SA;
+    int flag = 0;
     for (i=1; i<=size(S); i++){
         if(S[i]<VMinDPoly){
             SA[size(SA)+1] = S[i];
+            flag = 1;
         }
     }
     //list J1：拡大されたPのShape formのパラメータ部分の積、list J2：Pの先頭係数積の計算、Of：K[A, X]上の既約多項式集合、efficient HITにて特化イデアルの準素判定に登場
@@ -338,7 +369,12 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
     }
     ideal E = 0;
     //Conbine list SA_var, list J1, J2, list N={h1, ..., hm}, note that elements in {h1, ..., hm} + SA_var will be used in the next step of computing CGS. 
-    list SA_var = imap(RingAll, SA);
+    if(flag){
+        list SA_var = imap(RingAll, SA);
+    }else{
+        list SA_var = list();
+    }
+
     for(i=1; i<=size(SA_var); i++){
         if(SA_var[i] != 1){
             N[size(N)+1] = SA_var[i];
@@ -388,9 +424,154 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
         ideal cgsF = imap(RingVar, F);
 
         list CGS = idealcgs_main(cgsE, cgsN, cgsF);
-        //idealcgsはRingAll上のものを返す。その整合性を保て。
-        for(j=1; j<=size(CGS); j++){
-            Z[size(Z)+1] = PPD_main();
+        CGS;
+        if(size(CGS) != 0){
+            for(j=1; j<=size(CGS); j++){
+                ideal tempG, tempE;
+                list tempN;
+                tempE, tempN, tempG = CGS[j][1],  CGS[j][2], CGS[j][3];
+                if(size(tempN) == 0){
+                    tempN = poly(1);
+                }
+                setring(RingVar);
+                ideal ppdG, ppdE;
+                list ppdN;
+                ppdE, ppdN, ppdG = imap(RingAll, tempE), imap(RingAll, tempN), imap(RingAll, tempG);
+                Z[size(Z)+1] = ppd_main(ppdE, ppdN, ppdG);
+        
+                setring(RingAll);
+            }
+        }
+    }
+    setring(RingVar);
+    return(Z);
+}
+
+proc ppd_main(ideal E, list N, ideal G){
+    int i, j;
+    list Z = list();
+
+    list PD = primdecSY(G);
+    PD;
+    if(size(PD)==1){
+        poly zerocheck = PD[1][1][1];
+        if(zerocheck == 0){
+            Z = list(PD, E, N, list(poly(1)));
+            return(Z);
+        }
+    }
+
+    for(i=1; i<=size(PD); i++){
+        poly h = 1;
+        for(j=1; j<=size(PD[i][1]); j++){
+            h = h * leadcoef(PD[i][1][j]);
+        }
+        if(h != 1){
+            N[size(N)+1] = h;
+        }
+    }
+
+    setring(RingAll);
+
+    ideal F_all = imap(RingVar, F);
+    ideal G_all = imap(RingVar, G);
+    poly h_all = imap(RingVar, h);
+    
+    ideal S = quotient(F_all, G_all);
+
+    list SA;
+    int flag = 0;
+    for (i=1; i<=size(S); i++){
+        if(S[i]<VMinDPoly){
+            SA[size(SA)+1] = S[i];
+            flag = 1;
+        }
+    }
+
+    setring(RingVar);
+    list J1, J2;
+    list Of;
+
+    for(i=1; i<=size(PD); i++){
+        ideal P = PD[i][2];
+        poly h = 1;
+        for(j=1; j<=size(P); j++){
+            h = h * leadcoef(P[j]);
+        }
+        if(h != 1){
+            J2[size(J2)+1] = h;
+        }
+        J1[size(J1)+1], Of[size(Of)+1] = ext_shape(P);
+    }
+
+    if(flag){
+        list SA_var = imap(RingAll, SA);
+    }else{
+        list SA_var = list();
+    }
+
+    for(i=1; i<=size(SA_var); i++){
+        if(SA_var[i] != 1){
+            N[size(N)+1] = SA_var[i];
+        }
+    }
+
+    int m = size(N);
+
+    list J;
+    poly tempf = 1;
+    for(i=1; i<=size(J1); i++){
+        tempf = tempf * J1[i];
+    }
+    J[size(J)+1] = tempf;
+
+    poly tempf = 1;
+    for(i=1; i<=size(J2); i++){
+        tempf = tempf * J2[i];
+    }
+    J[size(J)+1] = tempf;
+
+    for(i=1; i<=size(J); i++){
+        if(J[i] != 1){
+            int not_redundant = 1;
+            for(j=1; j<=size(N); j++){
+                if(N[j] == J[i]){
+                    not_redundant = 0;
+                    break;
+                }
+            }
+            if(not_redundant){
+                N[size(N)+1] = J[i];
+            }
+        }
+    }
+    
+    Z[size(Z)+1] = list(PD, E, N, Of);
+
+    for(i=1; i<m; i++){
+        poly temph = N[i];
+
+        setring(RingAll);
+        ideal cgsE = imap(RingVar, temph);
+        list cgsN = imap(RingVar, N);
+        cgsN = delete(cgsN, i);
+        ideal cgsF = imap(RingVar, F);
+
+        list CGS = idealcgs_main(cgsE, cgsN, cgsF);
+        if(size(CGS) != 0){
+            for(j=1; j<=size(CGS); j++){
+                ideal tempG, tempE;
+                list tempN;
+                tempE, tempN, tempG = CGS[j][1],  CGS[j][2], CGS[j][3];
+
+                setring(RingVar);
+                ideal ppdG, ppdE;
+                list ppdN;
+                ppdE, ppdN, ppdG = imap(RingAll, tempE), imap(RingAll, tempN), imap(RingAll, tempG);
+                Z[size(Z)+1] = ppd_main(ppdE, ppdN, ppdG);
+        
+                setring(RingAll);
+            }
         }
     }
     setring(RingVar);
@@ -543,9 +724,9 @@ proc Check_Consistence(ideal Equ, list DisEqu){
     intvec Indvec = indepSet(LM);
     
     list Indvar;
-    for (i = size(Variables) + 1; i <= size(Indvec); i++){
+    for (i = size(Variables_all) + 1; i <= size(Indvec); i++){
         if (Indvec[i] != 0){
-            Indvar = Indvar + list(Parameters[i - size(Variables)]);
+            Indvar = Indvar + list(Parameters_all[i - size(Variables_all)]);
         }
     }
 

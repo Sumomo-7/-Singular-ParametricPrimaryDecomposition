@@ -3,17 +3,53 @@ LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/NABESHIMAcgs.lib";
 
 option(redSB);
 option(noredefine);
-
 ////Parametric Primary Decomposition////
+
+//Example 1, taken from [Y.Ishihara, K.Yokoyama - Comprehensive Systems for Primary Decompositions of Parametric Ideals, 2024]
 ring RingAll = 0, (x, y, a, b), (dp(2), dp);
 ring RingVar = (0, a, b), (x, y), dp;
 
-ideal F = x4 + y4 - ax2, ax2y + y3 + bx2;
+ideal F = x2 - a, bxy;
 list Paras = a, b;
 list Vars = x, y;
 list Indet = x, y, a, b;
-paraprimdec(F, Paras, Vars, Indet, RingVar, RingAll);
 
+//Example 2, taken from [Y.Ishihara, K.Yokoyama, 2024]
+// ring RingAll = 0, (x, y, z, a, b), (dp(3), dp);
+// ring RingVar = (0, a, b), (x, y, z), dp;
+// ideal F =
+
+//   -x + y - a*z^2 + b*z,
+
+//   (a+1)*x^3
+
+//   - (-y + (a^2-b)*z + (b+1)*a + 1)*x^2
+
+//   + ((a-2)*y + (a^2-a*b-2*a)*z + a*b + b)*x
+
+//   + y^2
+
+//   + ((-a^2+2*b)*z - a*b - b)*y
+
+//   + b^2*z^2
+
+//   + (-b^2*a - b^2)*z,
+
+//   -x^3
+
+//   + (z^2 - a*z - b - 1)*x^2
+
+//   + (y + z^2 + (-a+b)*z - b)*x
+
+//   + (-z^2 + a*z + b)*y
+
+//   - b*z^3 + b*z^2 + b^2*z;
+// list Paras = a, b;
+// list Vars = x, y, z;
+// list Indet = x, y, z, a, b;
+
+
+//Example 3, given by Prof.Nabeshima
 // ring RingAll = 0, (x, a, b), (dp(1), dp);
 // ring RingVar = (0, a, b), x, dp;
 
@@ -21,20 +57,16 @@ paraprimdec(F, Paras, Vars, Indet, RingVar, RingAll);
 // list Paras = a, b;
 // list Vars = x;
 // list Indet = x, a, b;
-////////////////////////////////////////
 
 
-///Comprehensive Groebner System///
-// ring RingVar = (0, a, b), (x, y), dp;
+//Example 4, give by Prof.Nabeshima
 // ring RingAll = 0, (x, y, a, b), (dp(2), dp);
-
-// ideal E = 0;
-// list N = 1;
+// ring RingVar = (0, a, b), (x, y), dp;
 // ideal F = x4 + y4 - ax2, ax2y + y3 + bx2;
 // list Paras = a, b;
 // list Vars = x, y;
 // list Indet = x, y, a, b;
-
-// idealcgs(E, N, F, Paras, Vars, RingVar, RingAll);
+////////////////////////////////////////
+paraprimdec(F, Paras, Vars, Indet, RingVar, RingAll);
 
 exit;
