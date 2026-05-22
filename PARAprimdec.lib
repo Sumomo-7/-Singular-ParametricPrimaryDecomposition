@@ -1,10 +1,10 @@
 LIB "primdec.lib";
+LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/primdecSYCI.lib";
 
 static proc list2string(list L){
     //数学的な意味を持たない。
     int i;
     string s = "";
-
     for(i=1; i<=size(L); i++){
         if(i>1){
             s = s + ",";
@@ -14,9 +14,9 @@ static proc list2string(list L){
     return(s);
 }
 
-static proc makering1(string ringName, list XUX, list AUA, list U){
+static proc makering1dp(string ringName, list XUX, list AUA, list U){
     //makering関数は全員数学的に大した意味を持たない。ただSingularでの環創成がlistに弱いのでその迂回策
-    //ring ringName = 0, (XUX, AUA, U), (dp(size(XUX)), dp(size(AUA)), dp(size(U)));
+    //ring ringName = 0, (XUX, AUA, U), (dp, dp, dp);
     string sX = list2string(XUX);
     string sA = list2string(AUA);
     string sU = list2string(U);
@@ -70,7 +70,7 @@ static proc makering1(string ringName, list XUX, list AUA, list U){
 }
 
 static proc makering1lp(string ringName, list XUX, list AUA, list U){
-    //ring ringName = 0, (XUX, AUA, U), (lp(size(XUX)), lp(size(AUA)), lp(size(U)));
+    //ring ringName = 0, (XUX, AUA, U), (dp, lp, lp);
     string sX = list2string(XUX);
     string sA = list2string(AUA);
     string sU = list2string(U);
@@ -123,145 +123,135 @@ static proc makering1lp(string ringName, list XUX, list AUA, list U){
     return(cmd);
 }
 
-static proc makering2(string ringName, list XUX, list AUA, list U){
-    //ring ringName = (0, U), (XUX, AUA), (dp(size(XUX)), dp(size(AUA)));
+static proc makering2dp(string ringName, list XUX, list UX){
+    //ring ringName = 0, (XUX, UX + A), (dp, dp);
+    //the set of parameters Parameters_all has been exported globally.
     string sX = list2string(XUX);
-    string sA = list2string(AUA);
-    string sU = list2string(U);
+    string sU = list2string(UX);
+    string sA = list2string(Parameters_all);
 
-    string vars = "";
+    string tail = "";
 
-    if(size(XUX)>0){
-        vars = sX;
+    if(size(UX)>0){
+        tail = sU;
+    }
+    if(size(Parameters_all)>0){
+        if(size(tail)>0){
+            tail = tail + ",";
+        }
+        tail = tail + sA;
     }
 
-    if(size(AUA)>0){
+    string vars = sX;
+
+    if(size(tail)>0){
         if(size(vars)>0){
             vars = vars + ",";
         }
-
-        vars = vars + sA;
+        vars = vars + tail;
     }
 
-    string ord = "(";
+    string Ord ="(dp(" + string(size(XUX)) + "),dp(" + string(size(UX)+size(Parameters_all)) + "))";
 
-    if(size(XUX)>0){
-        ord = ord + "dp(" + string(size(XUX)) + ")";
-    }
+    string Cmd = "ring " + ringName + " = 0,(" + vars + ")," + Ord + ";";
 
-    if(size(AUA)>0){
-        if(ord != "("){
-            ord = ord + ",";
-        }
-
-        ord = ord + "dp(" + string(size(AUA)) + ")";
-    }
-
-    ord = ord + ")";
-
-    string cmd =
-        "ring " + ringName
-        + " = (0,"
-        + "(" + sU + ")),"
-        + "(" + vars + "),"
-        + ord
-        + ";";
-
-    return(cmd);
+    return(Cmd);
 }
 
-static proc makering3(string ringName, list XUX, list AUA, list U){
-    //ring ringName = (0, AUA, U), XUX, dp;
+static proc makering2lp(string ringName, list XUX, list UX){
+    //ring ringName = 0, (XUX, UX + A), (lp, lp);
+    //the set of parameters Parameters_all has been exported globally.
     string sX = list2string(XUX);
-    string sA = list2string(AUA);
-    string sU = list2string(U);
+    string sU = list2string(UX);
+    string sA = list2string(Parameters_all);
 
-    string params = "";
+    string tail = "";
 
-    if(size(AUA)>0){
-        params = sA;
+    if(size(UX)>0){
+        tail = sU;
     }
-
-    if(size(U)>0){
-        if(size(params)>0){
-            params = params + ",";
+    if(size(Parameters_all)>0){
+        if(size(tail)>0){
+            tail = tail + ",";
         }
-
-        params = params + sU;
+        tail = tail + sA;
     }
 
-    string cmd =
-        "ring " + ringName
-        + " = (0,"
-        + "(" + params + ")),"
-        + "(" + sX + "),dp;";
+    string vars = sX;
 
-    return(cmd);
+    if(size(tail)>0){
+        if(size(vars)>0){
+            vars = vars + ",";
+        }
+        vars = vars + tail;
+    }
+
+    string Ord ="(lp(" + string(size(XUX)) + "),lp(" + string(size(UX)+size(Parameters_all)) + "))";
+
+    string Cmd = "ring " + ringName + " = 0,(" + vars + ")," + Ord + ";";
+
+    return(Cmd);
 }
 
 
 proc ext_shape(ideal varP){
-    //K[A, X]上の素イデアルPが与えられるとする。
+    //ただし与えられたvarPはK(A)[X]上の素イデアルのグレブナー基底である。
     //list Varが変数とパラメータリスト{X, A}である。
     //事前に最小変数VMinDPolyと多項式環RingAllがexportされているとする。
     //[Y.Ishihara, K.Yokoyama]Lemma12, Remark8によるshape form(とgeneric minimal polynomial)の計算
-    setring(RingAll);
-    ideal P = imap(RingVar, varP);
-    list Var = imap(RingVar, Indeterminates);
     int i, j;
+    ideal tempLead;
+    for(i=1; i<=size(varP); i++){
+        tempLead[size(tempLead)+1] = leadmonom(varP[i]);
+    }
 
-    intvec U = indepSet(P);
-    list XUX, AUA, varU;
-    for (j = 1; j <= size(U); j++){
-        if (U[j] == 0){
-            if (Var[j] < VMinDPoly){
-                AUA[size(AUA)+1] = Var[j];
-            }
-            else{
-                XUX[size(XUX)+1] = Var[j];
-            }
+    setring(RingAll);
+    ideal lead_P = imap(RingVar, tempLead);
+    list Var = imap(RingVar, Variables);
+
+    intvec U = indepSet(lead_P);
+    list XUX, UX;
+    for (i = 1; i <= size(Var); i++){
+        if (U[i] == 1){
+            UX[size(UX)+1] = Var[i];
         }else{
-            varU[size(varU)+1] = Var[j];
+            XUX[size(XUX)+1] = Var[i];
         }
     }
-    if(size(XUX) == 0){
-        XUX, AUA, varU = list(), list(), list();
-        list U_candidate = indepSet(P, 0);
+    if(size(XUX) == 0){//先頭イデアルで計算するからここのIF文はいらないと思う。
+        XUX, UX = list(), list();
+        list U_candidate = indepSet(lead_P, 0);
         for(i=1; i<=size(U_candidate); i++){
             U = U_candidate[i];
-            for (j = 1; j <= size(U); j++){
-                if (U[j] == 0){
-                    if (Var[j] < VMinDPoly){
-                        AUA[size(AUA)+1] = Var[j];
-                    }
-                    else{
-                        XUX[size(XUX)+1] = Var[j];
-                    }
+            for (j = 1; j <= size(Var); j++){
+                if (U[i] == 1){
+                    UX[size(UX)+1] = Var[i];
                 }else{
-                    varU[size(varU)+1] = Var[j];
+                    XUX[size(XUX)+1] = Var[i];
                 }
             }
             if(size(XUX) != 0){
                 break;
             }else{
-                XUX, AUA, varU = list(), list(), list();
+                XUX, UX = list(), list();
             }
         }
     }
 
     poly tempXr = XUX[size(XUX)];
 
-    string Cmd = makering1lp("RingShape", XUX, AUA, varU);
+    string Cmd = makering2lp("RingShape", XUX, UX);
     execute(Cmd);
-    poly Xr = imap(RingAll, tempXr);
 
-    ideal P_ext = imap(RingAll, P);
-    //これでPがK(AUA,varU)[XUX]へ拡大されたと考えられる。
-    ideal G = std(P_ext);
+    ideal P_ext = imap(RingVar, varP);
+    //これでPがK(A, UX)[XUX]へ拡大されたと考えられる。
+    //n.b. ring RingShape = 0, (XUX, UX+A), (lp, lp);
+    ideal G = groebner(P_ext);
     //［優先度低い］ほとんどの場合このGroebner基底がそのままShape formになるが、まれにそうでもなく、線形変換が必要になることがあり、対策を講じる必要である。
     //対応法として、[野呂・横山 - グレブナー基底の計算 基礎編]アルゴリズム4.9, 4.30などを参照されたい。Lex順序に関するGroebner基底がShape formでない場合、ランダムに線形変数変換を施した後、独立に最小多項式を求めて、そのminimal polynomialでShape formが求まる。ただしこの場合Groebner基底w.r.t.lpで一気に両方を出すことは無理である。
     list PQ_shape;
     poly f_shape;
+    poly Xr = imap(RingAll, tempXr);
 
     for(i=1; i<=size(G); i++){
         if(variables(G[i])[1] != Xr){
@@ -313,19 +303,11 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
     list Z = list();
 
     ideal G = std(F);
-    list PD = primdecSY(G);
-    list N = list();
 
-    //準素成分Q_iの先頭係数積を集める。Gの先頭係数がこれらに含まれるはずなので別に集める必要はない。
-    for(i=1; i<=size(PD); i++){
-        poly h = 1;
-        for(j=1; j<=size(PD[i][1]); j++){
-            h = h * leadcoef(PD[i][1][j]);
-        }
-        if(h != 1){
-            N[size(N)+1] = h;
-        }
-    }
+    list PD = primdecSY(G);
+    //list PD = primdecSYCI(G);
+    ideal E = 0;
+    list N = list();
 
     setring(RingAll);
     list Variables_all = imap(RingVar, Variables);
@@ -336,7 +318,6 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
 
     ideal F_all = imap(RingVar, F);
     ideal G_all = imap(RingVar, G);
-    poly h_all = imap(RingVar, h);
     
     //S \intersect K[A]の計算
     ideal S = quotient(F_all, G_all);
@@ -354,7 +335,16 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
 
     list J1, J2;
     list Of;
-    for(i=1; i<=size(PD); i++){//Q_iの先頭項も併せてここで入れた方が効率的かも、再帰呼び出しを簡単にするためあえて別々でする。
+    for(i=1; i<=size(PD); i++){
+        ideal Q = PD[i][1];
+        poly h = 1;
+        for(j=1; j<=size(Q); j++){
+            h = h * leadcoef(Q[j]);
+        }
+        if(h != 1){
+            N[size(N)+1] = h;
+        }
+
         ideal P = PD[i][2];
         poly h = 1;
         for(j=1; j<=size(P); j++){
@@ -365,7 +355,7 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
         }
         J1[size(J1)+1], Of[size(Of)+1] = ext_shape(P);
     }
-    ideal E = 0;
+
     //Conbine list SA_var, list J1, J2, list N={h1, ..., hm}, note that elements in {h1, ..., hm} + SA_var will be used in the next step of computing CGS. 
     if(flag){
         list SA_var = imap(RingAll, SA);
@@ -379,50 +369,37 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
         }
     }
 
-    int m = size(N);
-    //再帰呼び出しではN[1]~N[m]を呼び出す。
-
-    list J;
     poly tempf = 1;
     for(i=1; i<=size(J1); i++){
         tempf = tempf * J1[i];
     }
-    J[size(J)+1] = tempf;
+    N[size(N)+1] = tempf;
 
     poly tempf = 1;
     for(i=1; i<=size(J2); i++){
         tempf = tempf * J2[i];
     }
-    J[size(J)+1] = tempf;
+    N[size(N)+1] = tempf;
 
-    for(i=1; i<=size(J); i++){
-        if(J[i] != 1){
-            int not_redundant = 1;
-            for(j=1; j<=size(N); j++){
-                if(N[j] == J[i]){
-                    not_redundant = 0;
-                    break;
-                }
-            }
-            if(not_redundant){
-                N[size(N)+1] = J[i];
-            }
-        }
-    }
-    
+    setring(RingAll);
+    list old_N = imap(RingVar, N);
+    ideal E_all = imap(RingVar, E);
+    list new_N = Simplify_DisEqu(old_N, E_all);//KSW_CGSから借りた。Nに対するFactorizationの上にEを使って簡約させた。
+    list cgsN = list();//後のCGS呼び出すで使う。ここで定義すればimapが一回減らせる。
+    setring(RingVar);
+
+    list N = imap(RingAll, new_N);
     Z[size(Z)+1] = list(PD, E, N, Of);
 
-    for(i=1; i<=m; i++){
+    for(i=1; i<=size(N); i++){
         poly temph = N[i];
-
         setring(RingAll);
         ideal cgsE = imap(RingVar, temph);
-        list cgsN = imap(RingVar, N);
-        cgsN = delete(cgsN, i);
         ideal cgsF = imap(RingVar, F);
 
         list CGS = idealcgs_main(cgsE, cgsN, cgsF);
-        if(size(CGS) != 0){
+        cgsN[size(cgsN)+1] = imap(RingVar, temph);
+        if(size(CGS)){
             for(j=1; j<=size(CGS); j++){
                 ideal tempG, tempE;
                 list tempN;
@@ -434,13 +411,13 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
                 ideal ppdG, ppdE;
                 list ppdN;
                 ppdE, ppdN, ppdG = imap(RingAll, tempE), imap(RingAll, tempN), imap(RingAll, tempG);
-                Z[size(Z)+1] = ppd_main(ppdE, ppdN, ppdG);
+                Z = Z + ppd_main(ppdE, ppdN, ppdG);
         
                 setring(RingAll);
             }
         }
+        setring(RingVar);
     }
-    setring(RingVar);
     return(Z);
 }
 
@@ -449,21 +426,12 @@ proc ppd_main(ideal E, list N, ideal G){
     list Z = list();
 
     list PD = primdecSY(G);
-    if(size(PD)==1){
+    //list PD = primdecSYCI(G);
+    if(size(PD)==1){//ゼロイデアルが出たら直ちにReturnさせる。
         poly zerocheck = PD[1][1][1];
         if(zerocheck == 0){
-            Z = list(PD, E, N, list(poly(1)));
+            Z[size(Z)+1] = list(PD, E, N, list(poly(1)));
             return(Z);
-        }
-    }
-
-    for(i=1; i<=size(PD); i++){
-        poly h = 1;
-        for(j=1; j<=size(PD[i][1]); j++){
-            h = h * leadcoef(PD[i][1][j]);
-        }
-        if(h != 1){
-            N[size(N)+1] = h;
         }
     }
 
@@ -471,7 +439,6 @@ proc ppd_main(ideal E, list N, ideal G){
 
     ideal F_all = imap(RingVar, F);
     ideal G_all = imap(RingVar, G);
-    poly h_all = imap(RingVar, h);
     
     ideal S = quotient(F_all, G_all);
 
@@ -483,12 +450,21 @@ proc ppd_main(ideal E, list N, ideal G){
             flag = 1;
         }
     }
-
+    
     setring(RingVar);
     list J1, J2;
     list Of;
 
     for(i=1; i<=size(PD); i++){
+        ideal Q = PD[i][1];
+        poly h = 1;
+        for(j=1; j<=size(Q); j++){
+            h = h * leadcoef(Q[j]);
+        }
+        if(h != 1){
+            N[size(N)+1] = h;
+        }
+
         ideal P = PD[i][2];
         poly h = 1;
         for(j=1; j<=size(P); j++){
@@ -512,49 +488,45 @@ proc ppd_main(ideal E, list N, ideal G){
         }
     }
 
-    int m = size(N);
-
-    list J;
     poly tempf = 1;
     for(i=1; i<=size(J1); i++){
         tempf = tempf * J1[i];
     }
-    J[size(J)+1] = tempf;
+    N[size(N)+1] = tempf;
 
     poly tempf = 1;
     for(i=1; i<=size(J2); i++){
         tempf = tempf * J2[i];
     }
-    J[size(J)+1] = tempf;
+    N[size(N)+1] = tempf;
 
-    for(i=1; i<=size(J); i++){
-        if(J[i] != 1){
-            int not_redundant = 1;
-            for(j=1; j<=size(N); j++){
-                if(N[j] == J[i]){
-                    not_redundant = 0;
-                    break;
-                }
-            }
-            if(not_redundant){
-                N[size(N)+1] = J[i];
-            }
-        }
+    setring(RingAll);
+    list old_N = imap(RingVar, N);
+    ideal E_all = imap(RingVar, E);
+    list new_N = Simplify_DisEqu(old_N, E_all);
+    int empty_N = 0;
+    if(size(new_N) == 0){
+        empty_N = 1;
     }
-    
+    list cgsN = list();
+    setring(RingVar);
+
+    if(empty_N){
+        list N = poly(1);
+    }else{
+        list N = imap(RingAll, new_N);
+    }
     Z[size(Z)+1] = list(PD, E, N, Of);
 
-    for(i=1; i<m; i++){
+    for(i=1; i<size(N); i++){
         poly temph = N[i];
-
         setring(RingAll);
         ideal cgsE = imap(RingVar, temph);
-        list cgsN = imap(RingVar, N);
-        cgsN = delete(cgsN, i);
         ideal cgsF = imap(RingVar, F);
 
         list CGS = idealcgs_main(cgsE, cgsN, cgsF);
-        if(size(CGS) != 0){
+        cgsN[size(cgsN)+1] = imap(RingVar, temph);
+        if(size(CGS)){
             for(j=1; j<=size(CGS); j++){
                 ideal tempG, tempE;
                 list tempN;
@@ -564,17 +536,17 @@ proc ppd_main(ideal E, list N, ideal G){
                 ideal ppdG, ppdE;
                 list ppdN;
                 ppdE, ppdN, ppdG = imap(RingAll, tempE), imap(RingAll, tempN), imap(RingAll, tempG);
-                Z[size(Z)+1] = ppd_main(ppdE, ppdN, ppdG);
+                Z = Z + ppd_main(ppdE, ppdN, ppdG);
         
                 setring(RingAll);
             }
         }
+        setring(RingVar);
     }
-    setring(RingVar);
     return(Z);
 }
 
-/////Comprehensive Groebner System/////
+/////Codes for the Computation of Comprehensive Groebner Systems/////
 static proc Radical_Equ(ideal Equ){
 //From KSW. Eの元を因数分解して無平方化しただけ。できるだけ遅いとされる根基を避けている本アルゴリズムでは初手で根基を計算するわけがない。
     if (size(Equ) == 0){
