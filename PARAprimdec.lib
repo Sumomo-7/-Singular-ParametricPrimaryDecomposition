@@ -508,7 +508,7 @@ proc ppd_main(ideal E, list N, ideal G){
     if(size(new_N) == 0){
         empty_N = 1;
     }
-    list cgsN = list();
+    list cgsN = new_N;
     setring(RingVar);
 
     if(empty_N){
