@@ -202,7 +202,7 @@ proc Check_Consistence(ideal Equ, list DisEqu){
     }
 }
 
-proc idealcgs(ideal E, list N, ideal F, list Paras, list Vars, def RingVar, def RingAll){
+proc idealcgs(ideal E, list N, ideal F, list Paras, list Vars, def RingVar, def RingAll, list #){
     // the term ordering on RingAll should be a block ordering such that A<<X, where A is the set of parameters and X is the set of variables.
     option(redSB);
     option(noredefine);
@@ -217,7 +217,12 @@ proc idealcgs(ideal E, list N, ideal F, list Paras, list Vars, def RingVar, def 
 
     setring(RingAll);
 
-    list G = idealcgs_main(E, N, F);
+    if(size(#)){
+        int q = #[1];
+        list G = finitefield_idealcgs_main(q, E, N, F);
+    }else{
+        list G = idealcgs_main(E, N, F);
+    }
 
     setring(RingAll);
     return(G);
@@ -315,6 +320,150 @@ proc MDBasis(G){
             }
         }
     }
+    setring(RingAll);
+    return(imap(RingVar, basis), imap(RingVar, LCoefs));
+}
+
+proc finitefield_idealcgs_main(int q, ideal E, list N, ideal F){
+    //K.Tanakaによる有限体上のCGS計算方法。Consistence Check以外は著しい変更はない。
+    int i;
+    ideal new_E = std(E);
+    new_E = Radical_Equ(new_E);
+    list new_N = Simplify_DisEqu(N, new_E);
+    new_E = Simplify_Equ(new_E, new_N);
+
+    if (!FF_Check_Consistence(q, new_E, new_N)){
+        return(list());
+    }
+
+    ideal G = std(F + new_E);
+
+    if (G[1] == 1){
+        return(list(list(new_E, new_N, ideal(1))));
+    }
+
+    list Z = list();
+
+    ideal GB, Gr;
+    for(i = 1; i <= size(G); i++){
+        if(G[i] > VMinDPoly){
+            GB[size(GB)+1] = G[i];
+        }else{
+            Gr[size(Gr)+1] = G[i];
+        }
+    }
+
+    if (size(GB) == 0){
+        return(list(list(new_E, new_N, ideal(0))));
+    }
+
+    if(!FF_Check_Consistence(q, new_E + Gr, N)){
+        ideal tempGr = Gr;
+        for(i=1; i<=size(new_N); i++){
+            tempGr[size(tempGr)+1] = N[i];
+        }
+        Z[size(Z)+1] = list(new_E, tempGr, ideal(1));
+    }
+    if(!FF_Check_Consistence(q, Gr, new_N)){
+        return(Z);
+    }
+
+    ideal Gm;
+    poly LCoefs;
+    Gm, LCoefs = MDBasis(GB);
+    list LCFactors;
+    ideal tempLCFactors = factorize(LCoefs, 1);
+    for(i=1; i<=size(tempLCFactors); i++){
+        LCFactors[size(LCFactors)+1] = tempLCFactors[i];
+    }
+
+    if(FF_Check_Consistence(q, new_E, new_N + LCFactors)){
+        Z[size(Z)+1] = list(new_E, new_N + LCFactors, Gm);
+    }
+
+    list tempN = new_N;
+    for(i = 1; i <= size(LCFactors); i++){
+        ideal tempE = E;
+        tempE[size(tempE)+1] = LCFactors[i];
+        Z = Z + finitefield_idealcgs_main(q, tempE, tempN, G);
+        tempN[size(tempN)+1] = LCFactors[i];
+    }
+    return(Z);
+}
+
+static proc FF_Check_Consistence(int q, ideal E, list N){
+    //the basering shall be kept in RingAll.
+    int i;
+    if(!size(N) && reduce(poly(1), E)!=0){
+        return(1);
+    }
+    ideal PHI;
+    for(i=1; i<=size(Parameters); i++){
+        poly tempU = Parameters[i];
+        PHI[size(PHI)+1] = tempU^q - tempU;
+    }
+
+    ideal tempE = std(E + PHI);
+
+    for(i=1; i<=size(N); i++){
+        if(reduce(N[i], tempE) != 0){
+            return(1);
+        }
+    }
+    return(0);
+}
+
+proc FF_MDBasis(G){
+    int i, j, k, redundant;
+
+    setring(RingVar);
+    ideal G = imap(RingAll, G);
+    list LCoefs;
+
+    ideal lm_G;
+    for(i=1; i<=size(G); i++){
+        lm_G[size(lm_G)+1] = leadmonom(G[i]);
+    }
+
+    setring(RingAll);
+    ideal lm_G = imap(RingVar, lm_G);
+    lm_G = std(lm_G);
+
+    setring(RingVar);
+    ideal lm_G = imap(RingAll, lm_G);
+
+    ideal basis;
+    for (i=1; i<=size(G); i++){
+        for(j=1; j<=size(lm_G); j++){
+            if(leadmonom(G[i]) == lm_G[j]){
+                redundant = 0;
+                for(k=1; k<=size(basis); k++){
+                    if(leadmonom(basis[k]) == leadmonom(G[i])){
+                        redundant = 1;
+                        break;
+                    }
+                }
+                if(redundant == 0){
+                    basis[size(basis)+1] = G[i];
+                }
+            }
+        }
+    }
+
+    for(i=1; i<=size(basis); i++){
+        redundant = 0;
+        poly templc = leadcoef(basis[i]);
+
+        for(j=1; j<=size(LCoefs); j++){
+            if(LCoefs[j] == templc){
+                redundant = 1;
+            }
+        }
+        if(!redundant){
+            LCoefs[size(LCoefs)+1] = templc;
+        }
+    }
+
     setring(RingAll);
     return(imap(RingVar, basis), imap(RingVar, LCoefs));
 }
