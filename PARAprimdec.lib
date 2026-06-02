@@ -1,4 +1,6 @@
 LIB "primdec.lib";
+LIB "elim.lib";
+LIB "polylib.lib";
 LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/primdecSYCI.lib";
 
 static proc list2string(list L){
@@ -193,8 +195,27 @@ static proc makering2lp(string ringName, list XUX, list UX){
     return(Cmd);
 }
 
+proc makering3dp(string ringName, list UX, list XUX){
+    // ring ringName = (0, A, UX), XUX, dp;
+    string sX = list2string(XUX);
+    string sU = list2string(UX);
+    string sA = list2string(Parameters_all);
+    string sCoef = "0";
+    
+    if(size(Parameters_all)>0){
+        sCoef = sCoef + ",";
+        sCoef = sCoef + sA;
+    }
+    if(size(UX)>0){
+        sCoef = sCoef + ",";
+        sCoef = sCoef + sU;
+    }
 
-proc ext_shape(ideal varP){
+    string Cmd = "ring " + ringName + " = (" + sCoef + "), (" + sX + "), dp;";
+    return(Cmd);
+}
+
+proc ext_shape(ideal varQ, ideal varP){
     //ただし与えられたvarPはK(A)[X]上の素イデアルのグレブナー基底である。
     //list Varが変数とパラメータリスト{X, A}である。
     //事前に最小変数VMinDPolyと多項式環RingAllがexportされているとする。
@@ -218,29 +239,36 @@ proc ext_shape(ideal varP){
             XUX[size(XUX)+1] = Var[i];
         }
     }
-    if(size(XUX) == 0){//先頭イデアルで計算するからここのIF文はいらないと思う。
-        XUX, UX = list(), list();
-        list U_candidate = indepSet(lead_P, 0);
-        for(i=1; i<=size(U_candidate); i++){
-            U = U_candidate[i];
-            for (j = 1; j <= size(Var); j++){
-                if (U[i] == 1){
-                    UX[size(UX)+1] = Var[i];
-                }else{
-                    XUX[size(XUX)+1] = Var[i];
-                }
-            }
-            if(size(XUX) != 0){
-                break;
-            }else{
-                XUX, UX = list(), list();
-            }
-        }
-    }
 
     poly tempXr = XUX[size(XUX)];
 
-    string Cmd = makering2lp("RingShape", XUX, UX);
+    string Cmd = makering3dp("RingSat", UX, XUX);
+    execute(Cmd);
+
+    ideal satQ, satP = imap(RingVar, varQ), imap(RingVar, varP);
+    ideal tempLCQ, tempLCP;
+
+    for(i=1; i<=size(satP); i++){
+        tempLCP[size(tempLCP)+1] = leadcoef(satP[i]);
+    }
+    for(i=1; i<=size(satQ); i++){
+        tempLCQ[size(tempLCQ)+1] = leadcoef(satQ[i]);
+    }
+    poly t1, t2 = lcm(tempLCP), lcm(tempLCQ);
+
+    setring(RingAll);
+
+    ideal H1 = sat(imap(RingVar, varP), imap(RingSat, t1))[1];
+    ideal H2 = sat(imap(RingVar, varQ), imap(RingSat, t2))[1];
+
+    ideal T1, T2;
+    poly lcH1, lcH2;
+    T1, lcH1 = MDBasis(H1);
+    T2, lcH2 = MDBasis(H2);
+    kill(T1);
+    kill(T2);
+
+    Cmd = makering2lp("RingShape", XUX, UX);
     execute(Cmd);
 
     ideal P_ext = imap(RingVar, varP);
@@ -276,16 +304,20 @@ proc ext_shape(ideal varP){
     poly f = imap(RingShape, f_shape);
 
     for(i=1; i<=size(PQ); i++){
-        lcPlcQ = lcPlcQ * leadcoef(PQ[i]);
-        if(PQ[i]-lead(PQ[i]) != 0){
+        poly temptail = PQ[i]-lead(PQ[i]);
+        if(temptail != 0){
             //そのままq_i == 0 になることもあるから、0がかけられたら困るのでIF文を入れる。
-            lcPlcQ = lcPlcQ * leadcoef(PQ[i]-lead(PQ[i]));
+            lcPlcQ = lcPlcQ * leadcoef(temptail);
         }
     }
-    return(lcPlcQ, f);
+    lcPlcQ = lcPlcQ * leadcoef(f);
+
+    poly lcH = imap(RingAll, lcH1) * imap(RingAll, lcH2);
+
+    return(lcPlcQ, f, lcH);
 }
 
-proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def RingAll){
+proc paraprimdec(ideal F, list Paras, list Vars, list Indet, def RingVar, def RingAll){
     //イデアルFがRingVarの下で与えられたと仮定する。
     option(redSB);
     option(noredefine);
@@ -314,7 +346,7 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
     list Parameters_all = imap(RingVar, Parameters);
     poly VMinDPoly = imap(RingVar, VMinDPoly_var);
     export(Variables_all, Parameters_all);
-    export(VMinDPoly, Checks);
+    export(VMinDPoly);
 
     ideal F_all = imap(RingVar, F);
     ideal G_all = imap(RingVar, G);
@@ -337,15 +369,15 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
     list Of;
     for(i=1; i<=size(PD); i++){
         ideal Q = PD[i][1];
+        ideal P = PD[i][2];
         poly h = 1;
+
         for(j=1; j<=size(Q); j++){
             h = h * leadcoef(Q[j]);
         }
         if(h != 1){
             N[size(N)+1] = h;
         }
-
-        ideal P = PD[i][2];
         poly h = 1;
         for(j=1; j<=size(P); j++){
             h = h * leadcoef(P[j]);
@@ -353,7 +385,7 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet,def RingVar, def Rin
         if(h != 1){
             J2[size(J2)+1] = h;
         }
-        J1[size(J1)+1], Of[size(Of)+1] = ext_shape(P);
+        J1[size(J1)+1], Of[size(Of)+1], N[size(N)+1] = ext_shape(Q, P);
     }
 
     //Conbine list SA_var, list J1, J2, list N={h1, ..., hm}, note that elements in {h1, ..., hm} + SA_var will be used in the next step of computing CGS. 
@@ -457,15 +489,15 @@ proc ppd_main(ideal E, list N, ideal G){
 
     for(i=1; i<=size(PD); i++){
         ideal Q = PD[i][1];
+        ideal P = PD[i][2];
         poly h = 1;
+
         for(j=1; j<=size(Q); j++){
             h = h * leadcoef(Q[j]);
         }
         if(h != 1){
             N[size(N)+1] = h;
         }
-
-        ideal P = PD[i][2];
         poly h = 1;
         for(j=1; j<=size(P); j++){
             h = h * leadcoef(P[j]);
@@ -473,7 +505,7 @@ proc ppd_main(ideal E, list N, ideal G){
         if(h != 1){
             J2[size(J2)+1] = h;
         }
-        J1[size(J1)+1], Of[size(Of)+1] = ext_shape(P);
+        J1[size(J1)+1], Of[size(Of)+1], N[size(N)+1] = ext_shape(Q, P);
     }
 
     if(flag){
@@ -843,4 +875,93 @@ proc MDBasis(G){
     }
     setring(RingAll);
     return(imap(RingVar, basis), imap(RingVar, LCoefs));
+}
+
+proc finitefield_idealcgs_main(int q, ideal E, list N, ideal F){
+    //K.Tanakaによる有限体上のCGS計算方法。Consistence Check以外は著しい変更はない。
+    int i;
+    ideal new_E = std(E);
+    new_E = Radical_Equ(new_E);
+    list new_N = Simplify_DisEqu(N, new_E);
+    new_E = Simplify_Equ(new_E, new_N);
+
+    if (!FF_Check_Consistence(q, new_E, new_N)){
+        return(list());
+    }
+
+    ideal G = std(F + new_E);
+
+    if (G[1] == 1){
+        return(list(list(new_E, new_N, ideal(1))));
+    }
+
+    list Z = list();
+
+    ideal GB, Gr;
+    for(i = 1; i <= size(G); i++){
+        if(G[i] > VMinDPoly){
+            GB[size(GB)+1] = G[i];
+        }else{
+            Gr[size(Gr)+1] = G[i];
+        }
+    }
+
+    if (size(GB) == 0){
+        return(list(list(new_E, new_N, ideal(0))));
+    }
+
+    if(!FF_Check_Consistence(q, new_E + Gr, N)){
+        ideal tempGr = Gr;
+        for(i=1; i<=size(new_N); i++){
+            tempGr[size(tempGr)+1] = N[i];
+        }
+        Z[size(Z)+1] = list(new_E, tempGr, ideal(1));
+    }
+    if(!FF_Check_Consistence(q, Gr, new_N)){
+        return(Z);
+    }
+
+    ideal Gm;
+    poly LCoefs;
+    Gm, LCoefs = MDBasis(GB);
+    list LCFactors;
+    ideal tempLCFactors = factorize(LCoefs, 1);
+    for(i=1; i<=size(tempLCFactors); i++){
+        LCFactors[size(LCFactors)+1] = tempLCFactors[i];
+    }
+
+    if(FF_Check_Consistence(q, new_E, new_N + LCFactors)){
+        Z[size(Z)+1] = list(new_E, new_N + LCFactors, Gm);
+    }
+
+    list tempN = new_N;
+    for(i = 1; i <= size(LCFactors); i++){
+        ideal tempE = E;
+        tempE[size(tempE)+1] = LCFactors[i];
+        Z = Z + finitefield_idealcgs_main(q, tempE, tempN, G);
+        tempN[size(tempN)+1] = LCFactors[i];
+    }
+    return(Z);
+}
+
+static proc FF_Check_Consistence(int q, ideal E, list N){
+    //the basering shall be kept in RingAll.
+    int i;
+    if(!size(N) && reduce(poly(1), E)!=0){
+        return(1);
+    }
+    ideal PHI;
+    for(i=1; i<=size(Parameters); i++){
+        poly tempU = Parameters[i];
+        PHI[size(PHI)+1] = tempU^q - tempU;
+    }
+
+    ideal tempE = std(E + PHI);
+
+    for(i=1; i<=size(N); i++){
+        if(reduce(N[i], tempE) != 0){
+            return(1);
+        }
+    }
+    return(0);
 }
