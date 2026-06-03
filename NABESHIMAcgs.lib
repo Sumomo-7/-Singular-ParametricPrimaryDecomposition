@@ -248,15 +248,28 @@ proc idealcgs_main(ideal E, list N, ideal F){
 
     list Z = list();
 
-    ideal GB;
+    ideal GB, Gr;
     for(i = 1; i <= size(G); i++){
-        if(G[i] > VMinDPoly){
+        if(G[i] >= VMinDPoly){
             GB[size(GB)+1] = G[i];
+        }else{
+            Gr[size(Gr)+1] = G[i];
         }
     }
 
     if (size(GB) == 0){
         return(list(list(new_E, new_N, ideal(0))));
+    }
+
+    if(Check_Consistence(new_E + Gr, new_N)){
+        list tempN = new_N;
+        for(i=1; i<=size(Gr); i++){
+            tempN[size(tempN)+1] = Gr[i];
+        }
+        Z[size(Z)+1] = list(new_E, tempN, ideal(1));
+    }
+    if(!Check_Consistence(Gr, new_N)){
+        return(Z);
     }
 
     ideal Gm;
@@ -267,6 +280,8 @@ proc idealcgs_main(ideal E, list N, ideal F){
     for(i=1; i<=size(tempLCFactors); i++){
         LCFactors[size(LCFactors)+1] = tempLCFactors[i];
     }
+
+    new_E = new_E + Gr;
 
     if(Check_Consistence(new_E, new_N + LCFactors)){
         Z[size(Z)+1] = list(new_E, new_N + LCFactors, Gm);
@@ -345,19 +360,20 @@ proc finitefield_idealcgs_main(int q, ideal E, list N, ideal F){
     list Z = list();
 
     ideal GB, Gr;
+
     for(i = 1; i <= size(G); i++){
-        if(G[i] > VMinDPoly){
+        if(G[i] >= VMinDPoly){
             GB[size(GB)+1] = G[i];
         }else{
             Gr[size(Gr)+1] = G[i];
         }
     }
-
+    
     if (size(GB) == 0){
         return(list(list(new_E, new_N, ideal(0))));
     }
 
-    if(!FF_Check_Consistence(q, new_E + Gr, N)){
+    if(FF_Check_Consistence(q, new_E + Gr, N)){
         ideal tempGr = Gr;
         for(i=1; i<=size(new_N); i++){
             tempGr[size(tempGr)+1] = N[i];
@@ -376,6 +392,8 @@ proc finitefield_idealcgs_main(int q, ideal E, list N, ideal F){
     for(i=1; i<=size(tempLCFactors); i++){
         LCFactors[size(LCFactors)+1] = tempLCFactors[i];
     }
+
+    new_E = new_E + Gr;
 
     if(FF_Check_Consistence(q, new_E, new_N + LCFactors)){
         Z[size(Z)+1] = list(new_E, new_N + LCFactors, Gm);
