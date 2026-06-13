@@ -322,7 +322,7 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet, def RingVar, def Ri
     option(redSB);
     option(noredefine);
     int i, j;
-    
+
     list Parameters = Paras;
     list Variables = Vars;
     list Indeterminates = Indet;
@@ -332,133 +332,21 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet, def RingVar, def Ri
     export(Parameters, Variables, Indeterminates, VMinDPoly_var, Checks);
     export(RingVar, RingAll);
 
-    list Z = list();
-
-    ideal G = std(F);
-
-    list PD = primdecSY(G);
-    //list PD = primdecSYCI(G);
-    ideal E = 0;
-    list N = list();
-
     setring(RingAll);
     list Variables_all = imap(RingVar, Variables);
     list Parameters_all = imap(RingVar, Parameters);
+    ideal F_all = imap(RingVar, F);
     poly VMinDPoly = imap(RingVar, VMinDPoly_var);
     export(Variables_all, Parameters_all);
-    export(VMinDPoly);
-
-    ideal F_all = imap(RingVar, F);
-    ideal G_all = imap(RingVar, G);
+    export(F_all, VMinDPoly);
     
-    //S \intersect K[A]の計算
-    ideal S = quotient(F_all, G_all);
-
-    list SA;
-    int flag = 0;
-    for (i=1; i<=size(S); i++){
-        if(S[i]<VMinDPoly){
-            SA[size(SA)+1] = S[i];
-            flag = 1;
-        }
-    }
-    //list J1：拡大されたPのShape formのパラメータ部分の積、list J2：Pの先頭係数積の計算、Of：K[A, X]上の既約多項式集合、efficient HITにて特化イデアルの準素判定に登場
     setring(RingVar);
+    ideal E = poly(0);
+    list N = list();
+    ideal G = std(F);
 
-    list J1, J2;
-    list Of;
-    for(i=1; i<=size(PD); i++){
-        ideal Q = PD[i][1];
-        ideal P = PD[i][2];
-        poly h = 1;
+    list Z = ppd_main(E, N, G);
 
-        for(j=1; j<=size(Q); j++){
-            h = h * leadcoef(Q[j]);
-        }
-        if(h != 1){
-            N[size(N)+1] = h;
-        }
-        poly h = 1;
-        for(j=1; j<=size(P); j++){
-            h = h * leadcoef(P[j]);
-        }
-        if(h != 1){
-            J2[size(J2)+1] = h;
-        }
-        J1[size(J1)+1], Of[size(Of)+1], N[size(N)+1] = ext_shape(Q, P);
-    }
-
-    //Conbine list SA_var, list J1, J2, list N={h1, ..., hm}, note that elements in {h1, ..., hm} + SA_var will be used in the next step of computing CGS. 
-    if(flag){
-        list SA_var = imap(RingAll, SA);
-    }else{
-        list SA_var = list();
-    }
-
-    for(i=1; i<=size(SA_var); i++){
-        if(SA_var[i] != 1){
-            N[size(N)+1] = SA_var[i];
-        }
-    }
-
-    poly tempf = 1;
-    for(i=1; i<=size(J1); i++){
-        tempf = tempf * J1[i];
-    }
-    N[size(N)+1] = tempf;
-
-    poly tempf = 1;
-    for(i=1; i<=size(J2); i++){
-        tempf = tempf * J2[i];
-    }
-    typeof(tempf);
-    N[size(N)+1] = tempf;
-
-    setring(RingAll);
-    list old_N = imap(RingVar, N);
-    ideal E_all = imap(RingVar, E);
-    list new_N = Simplify_DisEqu(old_N, E_all);//KSW_CGSから借りた。Nに対するFactorizationの上にEを使って簡約させた。
-    int flag2 = 0;
-    if(!size(new_N)){
-        flag2 = 1;
-    }
-    list cgsN = list();//後のCGS呼び出すで使う。ここで定義すればimapが一回減らせる。
-    setring(RingVar);
-
-    if(flag2){
-        list N = list();
-    }else{
-        list N = imap(RingAll, new_N);
-    }
-    Z[size(Z)+1] = list(PD, E, N, Of);
-
-    for(i=1; i<=size(N); i++){
-        poly temph = N[i];
-        setring(RingAll);
-        ideal cgsE = imap(RingVar, temph);
-        ideal cgsF = imap(RingVar, F);
-
-        list CGS = idealcgs_main(cgsE, cgsN, cgsF);
-        cgsN[size(cgsN)+1] = imap(RingVar, temph);
-        if(size(CGS)){
-            for(j=1; j<=size(CGS); j++){
-                ideal tempG, tempE;
-                list tempN;
-                tempE, tempN, tempG = CGS[j][1],  CGS[j][2], CGS[j][3];
-                if(size(tempN) == 0){
-                    tempN = poly(1);
-                }
-                setring(RingVar);
-                ideal ppdG, ppdE;
-                list ppdN;
-                ppdE, ppdN, ppdG = imap(RingAll, tempE), imap(RingAll, tempN), imap(RingAll, tempG);
-                Z = Z + ppd_main(ppdE, ppdN, ppdG);
-        
-                setring(RingAll);
-            }
-        }
-        setring(RingVar);
-    }
     return(Z);
 }
 
@@ -470,7 +358,7 @@ proc ppd_main(ideal E, list N, ideal G){
     //list PD = primdecSYCI(G);
     if(size(PD)==1){//ゼロイデアルが出たら直ちにReturnさせる。
         poly zerocheck = PD[1][1][1];
-        if(zerocheck == 0){
+        if(zerocheck == 0 || zerocheck == 1){
             Z[size(Z)+1] = list(PD, E, N, list(poly(1)));
             return(Z);
         }
@@ -478,7 +366,6 @@ proc ppd_main(ideal E, list N, ideal G){
 
     setring(RingAll);
 
-    ideal F_all = imap(RingVar, F);
     ideal G_all = imap(RingVar, G);
     
     ideal S = quotient(F_all, G_all);
@@ -543,30 +430,30 @@ proc ppd_main(ideal E, list N, ideal G){
 
     setring(RingAll);
     list old_N = imap(RingVar, N);
-    ideal E_all = imap(RingVar, E);
+    ideal E_all = std(imap(RingVar, E));
+    ideal new_E = Radical_Equ(E_all);
     list new_N = Simplify_DisEqu(old_N, E_all);
-    int empty_N = 0;
-    if(size(new_N) == 0){
-        empty_N = 1;
+    new_E = Simplify_Equ(new_E, new_N);
+    if(!size(new_N)){
+        new_N = poly(1);
     }
-    list cgsN = new_N;
-    setring(RingVar);
 
-    if(empty_N){
-        list N = poly(1);
-    }else{
-        list N = imap(RingAll, new_N);
-    }
+    setring(RingVar);
+    ideal E = imap(RingAll, new_E);
+    list N = imap(RingAll, new_N);
+
+    Of = cleanoff(Of);
     Z[size(Z)+1] = list(PD, E, N, Of);
 
-    for(i=1; i<size(N); i++){
-        poly temph = N[i];
-        setring(RingAll);
-        ideal cgsE = imap(RingVar, temph);
-        ideal cgsF = imap(RingVar, F);
+    setring(RingAll);
 
-        list CGS = idealcgs_main(cgsE, cgsN, cgsF);
-        cgsN[size(cgsN)+1] = imap(RingVar, temph);
+    list tempN = 1;
+    for(i=1; i<=size(new_N); i++){
+        ideal cgsE;
+        cgsE[size(cgsE)+1] = new_N[i];
+        list CGS = idealcgs_main(cgsE, tempN, G_all);
+        tempN[size(tempN)+1] = new_N[i];
+
         if(size(CGS)){
             for(j=1; j<=size(CGS); j++){
                 ideal tempG, tempE;
@@ -580,11 +467,29 @@ proc ppd_main(ideal E, list N, ideal G){
                 Z = Z + ppd_main(ppdE, ppdN, ppdG);
         
                 setring(RingAll);
+                }
             }
         }
-        setring(RingVar);
-    }
+    setring(RingVar);
     return(Z);
+}
+
+static proc cleanoff(list Of){
+    int i;
+    setring(RingAll);
+    list Of_all = imap(RingVar, Of);
+
+    list tempOf;
+    for(i=1; i<=size(Of_all); i++){
+        if(size(variables(Of_all[i])) > 1){
+            tempOf[size(tempOf)+1] = Of_all[i];
+        }
+    }
+    if(!size(tempOf)){
+        tempOf = poly(1);
+    }
+    setring(RingVar);
+    return(imap(RingAll, tempOf));
 }
 
 /////Codes for the Computation of Comprehensive Groebner Systems/////
@@ -796,7 +701,6 @@ proc idealcgs_main(ideal E, list N, ideal F){
     new_E = Radical_Equ(new_E);
     list new_N = Simplify_DisEqu(N, new_E);
     new_E = Simplify_Equ(new_E, new_N);
-    //KSWのSによると、Simplify_Equがエラーを引き起こす可能性あるらしい。
 
     if (!Check_Consistence(new_E, new_N)){
         return(list());
@@ -819,19 +723,17 @@ proc idealcgs_main(ideal E, list N, ideal F){
         }
     }
 
-    if (size(GB) == 0){
-        return(list(list(new_E, new_N, ideal(0))));
-    }
-
-    if(Check_Consistence(new_E + Gr, new_N)){
-        list tempN = new_N;
-        for(i=1; i<=size(Gr); i++){
-            tempN[size(tempN)+1] = Gr[i];
+    //trivial branches
+    for (i = 1; i <= size(Gr); i++){
+        poly tempP = reduce(Gr[i], E);
+        if (tempP == 0){
+            i++;
+            continue;
         }
-        Z[size(Z)+1] = list(new_E, tempN, ideal(1));
-    }
-    if(!Check_Consistence(Gr, new_N)){
-        return(Z);
+        if (Check_Consistence(new_E, new_N + list(tempP))){
+            Z = Z + list(list(new_E, new_N + list(tempP), ideal(1)));
+        }
+        new_E = std(new_E + tempP);
     }
 
     ideal Gm;
@@ -843,8 +745,6 @@ proc idealcgs_main(ideal E, list N, ideal F){
         LCFactors[size(LCFactors)+1] = tempLCFactors[i];
     }
 
-    new_E = new_E + Gr;
-
     if(Check_Consistence(new_E, new_N + LCFactors)){
         Z[size(Z)+1] = list(new_E, new_N + LCFactors, Gm);
     }
@@ -854,7 +754,6 @@ proc idealcgs_main(ideal E, list N, ideal F){
         ideal tempE = new_E;
         tempE[size(tempE)+1] = LCFactors[i];
         Z = Z + idealcgs_main(tempE, tempN, G);
-
         tempN[size(tempN)+1] = LCFactors[i];
     }
     return(Z);

@@ -234,7 +234,6 @@ proc idealcgs_main(ideal E, list N, ideal F){
     new_E = Radical_Equ(new_E);
     list new_N = Simplify_DisEqu(N, new_E);
     new_E = Simplify_Equ(new_E, new_N);
-    //KSWのSによると、Simplify_Equがエラーを引き起こす可能性あるらしい。
 
     if (!Check_Consistence(new_E, new_N)){
         return(list());
@@ -257,19 +256,17 @@ proc idealcgs_main(ideal E, list N, ideal F){
         }
     }
 
-    if (size(GB) == 0){
-        return(list(list(new_E, new_N, ideal(0))));
-    }
-
-    if(Check_Consistence(new_E + Gr, new_N)){
-        list tempN = new_N;
-        for(i=1; i<=size(Gr); i++){
-            tempN[size(tempN)+1] = Gr[i];
+    //trivial branches
+    for (i = 1; i <= size(Gr); i++){
+        poly tempP = reduce(Gr[i], E);
+        if (tempP == 0){
+            i++;
+            continue;
         }
-        Z[size(Z)+1] = list(new_E, tempN, ideal(1));
-    }
-    if(!Check_Consistence(Gr, new_N)){
-        return(Z);
+        if (Check_Consistence(new_E, new_N + list(tempP))){
+            Z = Z + list(list(new_E, new_N + list(tempP), ideal(1)));
+        }
+        new_E = std(new_E + tempP);
     }
 
     ideal Gm;
@@ -281,8 +278,6 @@ proc idealcgs_main(ideal E, list N, ideal F){
         LCFactors[size(LCFactors)+1] = tempLCFactors[i];
     }
 
-    new_E = new_E + Gr;
-
     if(Check_Consistence(new_E, new_N + LCFactors)){
         Z[size(Z)+1] = list(new_E, new_N + LCFactors, Gm);
     }
@@ -292,7 +287,6 @@ proc idealcgs_main(ideal E, list N, ideal F){
         ideal tempE = new_E;
         tempE[size(tempE)+1] = LCFactors[i];
         Z = Z + idealcgs_main(tempE, tempN, G);
-
         tempN[size(tempN)+1] = LCFactors[i];
     }
     return(Z);
