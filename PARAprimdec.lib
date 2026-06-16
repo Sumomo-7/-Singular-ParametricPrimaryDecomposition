@@ -317,7 +317,7 @@ proc ext_shape(ideal varQ, ideal varP){
     return(lcPlcQ, f, lcH);
 }
 
-proc paraprimdec(ideal F, list Paras, list Vars, list Indet, def RingVar, def RingAll){
+proc paraprimdec(ideal F, list Paras, list Vars, list Indet, def RingVar, def RingAll, list #){
     //イデアルFがRingVarの下で与えられたと仮定する。
     option(redSB);
     option(noredefine);
@@ -345,7 +345,12 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet, def RingVar, def Ri
     list N = list();
     ideal G = std(F);
 
-    list Z = ppd_main(E, N, G);
+    if(size(#)){
+        int q = #[1];
+        list Z = finitefield_ppd_main(q, E, N, G);
+    }else{
+        list Z = ppd_main(E, N, G);
+    }
 
     return(Z);
 }
@@ -474,8 +479,132 @@ proc ppd_main(ideal E, list N, ideal G){
     return(Z);
 }
 
-static proc cleanoff(list Of){
-    int i;
+proc finitefield_ppd_main(int q, ideal E, list N, ideal G){
+    int i, j;
+    list Z = list();
+
+    list PD = primdecSY(G);
+    //list PD = primdecSYCI(G);
+    if(size(PD)==1){//ゼロイデアルが出たら直ちにReturnさせる。
+        poly zerocheck = PD[1][1][1];
+        if(zerocheck == 0 || zerocheck == 1){
+
+            Z[size(Z)+1] = list(PD, E, N, list(poly(1)));
+            return(Z);
+        }
+    }
+
+    setring(RingAll);
+
+    ideal G_all = imap(RingVar, G);
+    
+    ideal S = quotient(F_all, G_all);
+    list SA;
+    int flag = 0;
+    for (i=1; i<=size(S); i++){
+        if(S[i]<VMinDPoly){
+            SA[size(SA)+1] = S[i];
+            flag = 1;
+        }
+    }
+    
+    setring(RingVar);
+    list J1, J2;
+    list Of;
+
+    for(i=1; i<=size(PD); i++){
+        ideal Q = PD[i][1];
+        ideal P = PD[i][2];
+        poly h = 1;
+
+        for(j=1; j<=size(Q); j++){
+            h = h * leadcoef(Q[j]);
+        }
+        if(h != 1){
+            N[size(N)+1] = h;
+        }
+        poly h = 1;
+        for(j=1; j<=size(P); j++){
+            h = h * leadcoef(P[j]);
+        }
+        if(h != 1){
+            J2[size(J2)+1] = h;
+        }
+        J1[size(J1)+1], Of[size(Of)+1], N[size(N)+1] = ext_shape(Q, P);
+    }
+
+    if(flag){
+        list SA_var = imap(RingAll, SA);
+    }else{
+        list SA_var = list();
+    }
+
+    for(i=1; i<=size(SA_var); i++){
+        if(SA_var[i] != 1){
+            N[size(N)+1] = SA_var[i];
+        }
+    }
+
+    poly tempf = 1;
+    for(i=1; i<=size(J1); i++){
+        tempf = tempf * J1[i];
+    }
+    N[size(N)+1] = tempf;
+
+    poly tempf = 1;
+    for(i=1; i<=size(J2); i++){
+        tempf = tempf * J2[i];
+    }
+    N[size(N)+1] = tempf;
+
+    poly ON;
+    Of, ON = cleanoff(Of, q);
+    N = list(ON) + N;
+
+    setring(RingAll);
+    list old_N = imap(RingVar, N);
+    ideal E_all = std(imap(RingVar, E));
+    ideal new_E = Radical_Equ(E_all);
+    list new_N = Simplify_DisEqu(old_N, E_all);
+    new_E = Simplify_Equ(new_E, new_N);
+    if(!size(new_N)){
+        new_N = poly(1);
+    }
+    setring(RingVar);
+    ideal E = imap(RingAll, new_E);
+    list N = imap(RingAll, new_N);
+    Z[size(Z)+1] = list(PD, E, N, Of);
+
+    setring(RingAll);
+    list tempN = poly(1);
+    for(i=1; i<=size(new_N); i++){
+        ideal cgsE;
+        cgsE[size(cgsE)+1] = new_N[i];
+        list CGS = finitefield_idealcgs_main(q, cgsE, tempN, G_all);
+        tempN[size(tempN)+1] = new_N[i];
+
+        if(size(CGS)){
+            for(j=1; j<=size(CGS); j++){
+                ideal tempG, tempE;
+                list tempN;
+                tempE, tempN, tempG = CGS[j][1],  CGS[j][2], CGS[j][3];
+
+                setring(RingVar);
+                ideal ppdG, ppdE;
+                list ppdN;
+                ppdE, ppdN, ppdG = imap(RingAll, tempE), imap(RingAll, tempN), imap(RingAll, tempG);
+                Z = Z + finitefield_ppd_main(q, ppdE, ppdN, ppdG);
+        
+                setring(RingAll);
+                }
+            }
+        }
+    setring(RingVar);
+    return(Z);
+}
+
+static proc cleanoff(list Of, list #){
+    int i, j, k;
     setring(RingAll);
     list Of_all = imap(RingVar, Of);
 
@@ -488,6 +617,33 @@ static proc cleanoff(list Of){
     if(!size(tempOf)){
         tempOf = poly(1);
     }
+
+    if(size(#)){
+        int q = #[1];
+        poly tempN = 1;
+        for(i=1; i<=size(tempOf); i++){
+            poly f = tempOf[i];
+            poly miniVar = variables(f)[1];
+            if(miniVar == poly(0)){
+                i++;
+                continue;
+            }
+            setring(RingVar);
+            int d = deg(leadmonom(imap(RingAll, f)));
+            setring(RingAll);
+            for(j=1; j<=d-1; j++){
+                ideal Gr = std(f, (miniVar^q)^j - miniVar);
+                for(k=1; k<=size(Gr); k++){
+                    if(Gr[k] < VMinDPoly){
+                        tempN = tempN * Gr[k];
+                    }
+                }
+            }
+        }
+        setring(RingVar);
+        return(imap(RingAll, tempOf), imap(RingAll, tempN));
+    }
+
     setring(RingVar);
     return(imap(RingAll, tempOf));
 }
@@ -833,15 +989,16 @@ proc finitefield_idealcgs_main(int q, ideal E, list N, ideal F){
         return(list(list(new_E, new_N, ideal(0))));
     }
 
-    if(FF_Check_Consistence(q, new_E + Gr, N)){
-        list tempN = new_N;
-        for(i=1; i<=size(Gr); i++){
-            tempN[size(tempN)+1] = Gr[i];
+    for (i = 1; i <= size(Gr); i++){
+        poly tempP = reduce(Gr[i], E);
+        if (tempP == 0){
+            i++;
+            continue;
         }
-        Z[size(Z)+1] = list(new_E, tempN, ideal(1));
-    }
-    if(!FF_Check_Consistence(q, Gr, new_N)){
-        return(Z);
+        if (FF_Check_Consistence(new_E, new_N + list(tempP))){
+            Z = Z + list(list(new_E, new_N + list(tempP), ideal(1)));
+        }
+        new_E = std(new_E + tempP);
     }
 
     ideal Gm;
@@ -873,16 +1030,15 @@ static proc FF_Check_Consistence(int q, ideal E, list N){
     if(!size(N) && reduce(poly(1), E)!=0){
         return(1);
     }
-    ideal PHI;
-    for(i=1; i<=size(Parameters); i++){
-        poly tempU = Parameters[i];
-        PHI[size(PHI)+1] = tempU^q - tempU;
+    for(i=1; i<=size(Parameters_all); i++){
+        poly tempU = Parameters_all[i];
+        E[size(E)+1] = tempU^q - tempU;
     }
 
-    ideal tempE = std(E + PHI);
+    ideal E = std(E);
 
     for(i=1; i<=size(N); i++){
-        if(reduce(N[i], tempE) != 0){
+        if(reduce(N[i], E) != 0){
             return(1);
         }
     }

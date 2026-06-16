@@ -354,28 +354,28 @@ proc finitefield_idealcgs_main(int q, ideal E, list N, ideal F){
     list Z = list();
 
     ideal GB, Gr;
-
     for(i = 1; i <= size(G); i++){
-        if(G[i] >= VMinDPoly){
+        if(G[i] > VMinDPoly){
             GB[size(GB)+1] = G[i];
         }else{
             Gr[size(Gr)+1] = G[i];
         }
     }
-    
+
     if (size(GB) == 0){
         return(list(list(new_E, new_N, ideal(0))));
     }
 
-    if(FF_Check_Consistence(q, new_E + Gr, N)){
-        ideal tempGr = Gr;
-        for(i=1; i<=size(new_N); i++){
-            tempGr[size(tempGr)+1] = N[i];
+    for (i = 1; i <= size(Gr); i++){
+        poly tempP = reduce(Gr[i], E);
+        if (tempP == 0){
+            i++;
+            continue;
         }
-        Z[size(Z)+1] = list(new_E, tempGr, ideal(1));
-    }
-    if(!FF_Check_Consistence(q, Gr, new_N)){
-        return(Z);
+        if (FF_Check_Consistence(new_E, new_N + list(tempP))){
+            Z = Z + list(list(new_E, new_N + list(tempP), ideal(1)));
+        }
+        new_E = std(new_E + tempP);
     }
 
     ideal Gm;
@@ -386,8 +386,6 @@ proc finitefield_idealcgs_main(int q, ideal E, list N, ideal F){
     for(i=1; i<=size(tempLCFactors); i++){
         LCFactors[size(LCFactors)+1] = tempLCFactors[i];
     }
-
-    new_E = new_E + Gr;
 
     if(FF_Check_Consistence(q, new_E, new_N + LCFactors)){
         Z[size(Z)+1] = list(new_E, new_N + LCFactors, Gm);
@@ -409,16 +407,15 @@ static proc FF_Check_Consistence(int q, ideal E, list N){
     if(!size(N) && reduce(poly(1), E)!=0){
         return(1);
     }
-    ideal PHI;
-    for(i=1; i<=size(Parameters); i++){
-        poly tempU = Parameters[i];
-        PHI[size(PHI)+1] = tempU^q - tempU;
+    for(i=1; i<=size(Parameters_all); i++){
+        poly tempU = Parameters_all[i];
+        E[size(E)+1] = tempU^q - tempU;
     }
 
-    ideal tempE = std(E + PHI);
+    ideal E = std(E);
 
     for(i=1; i<=size(N); i++){
-        if(reduce(N[i], tempE) != 0){
+        if(reduce(N[i], E) != 0){
             return(1);
         }
     }
