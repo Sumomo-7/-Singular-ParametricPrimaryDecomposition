@@ -29,6 +29,110 @@ such that for parameter values $\alpha \in \mathbb{V}(E_i) \setminus \mathbb{V}(
 
 ## Example
 
+```C++:singular
+LIB "path/to/PARAprimdec.lib";
+option(redSB);
+option(noredefine);
+
+ring RingAll = 0, (x, y, a, b), (lp(2), lp);
+ring RingVar = (0, a, b), (x, y), lp;
+ideal F = x2 - a, bxy;
+list Paras = a, b;
+list Vars = x, y;
+list Indet = x, y, a, b;
+
+paraprimdec(F, Paras, Vars, Indet, RingVar, RingAll);
+
+[1]:
+   [1]:
+      [1]:
+         [1]:
+            _[1]=y
+            _[2]=x2+(-a)
+         [2]:
+            _[1]=y
+            _[2]=x2+(-a)
+   [2]:
+      _[1]=0
+   [3]:
+      [1]:
+         (a)
+      [2]:
+         (b)
+   [4]:
+      [1]:
+         x2+(-a)
+[2]:
+   [1]:
+      [1]:
+         [1]:
+            _[1]=x
+         [2]:
+            _[1]=x
+      [2]:
+         [1]:
+            _[1]=y
+            _[2]=x2
+         [2]:
+            _[1]=y
+            _[2]=x
+   [2]:
+      _[1]=(a)
+   [3]:
+      [1]:
+         (b)
+   [4]:
+      [1]:
+         1
+[3]:
+   [1]:
+      [1]:
+         [1]:
+            _[1]=x2
+         [2]:
+            _[1]=x
+   [2]:
+      _[1]=(b)
+      _[2]=(a)
+   [3]:
+      [1]:
+         1
+   [4]:
+      [1]:
+         1
+[4]:
+   [1]:
+      [1]:
+         [1]:
+            _[1]=x2
+         [2]:
+            _[1]=x
+   [2]:
+      _[1]=(b)
+      _[2]=(a)
+   [3]:
+      [1]:
+         1
+   [4]:
+      [1]:
+         1
+[5]:
+   [1]:
+      [1]:
+         [1]:
+            _[1]=x2+(-a)
+         [2]:
+            _[1]=x2+(-a)
+   [2]:
+      _[1]=(b)
+   [3]:
+      [1]:
+         1
+   [4]:
+      [1]:
+         x2+(-a)
+```
+
 
 ## Installation
 This package consists of a single Singular library file, `PARAprimdec.lib`.
