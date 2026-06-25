@@ -290,6 +290,11 @@ proc ext_shape(ideal varQ, ideal varP){
             }
         }
     }
+    
+    int flag = 0;
+    if(size(PQ_shape)){
+        flag = 1;
+    }
 
     if(f_shape == poly(1)){
         setring(RingAll);
@@ -300,8 +305,8 @@ proc ext_shape(ideal varQ, ideal varP){
         list tempPara = imap(RingVar, Parameters);
         ideal MinPolyVar = imap(RingAll, tempMinPolyVar);
 
+        int paraminpoly = 0;
         for(i=1; i<=size(MinPolyVar); i++){
-            int paraminpoly = 0;
             for(j=1; j<=size(tempPara); j++){
                 if(MinPolyVar[i] == tempPara[j]){
                     f_shape = G[size(G)];
@@ -315,11 +320,6 @@ proc ext_shape(ideal varQ, ideal varP){
         }
     }
 
-    int flag = 0;
-    if(size(PQ_shape)){
-        flag = 1;
-    }
-
     setring(RingVar);
     
     poly lcPlcQ = 1;
@@ -328,9 +328,13 @@ proc ext_shape(ideal varQ, ideal varP){
     }else{
         list PQ = list();
     }
+    for(i=1; i<=size(PQ); i++){
+        if(PQ[i] != 0){
+            lcPlcQ = lcPlcQ * leadcoef(PQ[i]);
+        }
+    }
 
     poly f = imap(RingShape, f_shape);
-
     lcPlcQ = lcPlcQ * leadcoef(f);
 
     return(lcPlcQ, f);
@@ -383,7 +387,20 @@ proc ppd_main(ideal E, list N, ideal G){
     if(size(PD)==1){//ゼロイデアルが出たら直ちにReturnさせる。
         poly zerocheck = PD[1][1][1];
         if(zerocheck == 0 || zerocheck == 1){
-            Z[size(Z)+1] = list(PD, E, N, list(poly(1)));
+            setring(RingAll);
+            list old_N = imap(RingVar, N);
+            ideal E_all = std(imap(RingVar, E));
+            ideal new_E = Radical_Equ(E_all);
+            list new_N = Simplify_DisEqu(old_N, E_all);
+            new_E = Simplify_Equ(new_E, new_N);
+            if(!size(new_N)){
+                new_N = poly(1);
+            }
+            setring(RingVar);
+            ideal E_out = imap(RingAll, new_E);
+            list N_out = imap(RingAll, new_N);
+
+            Z[size(Z)+1] = list(PD, E_out, N_out, list(poly(1)));
             return(Z);
         }
     }
@@ -395,18 +412,25 @@ proc ppd_main(ideal E, list N, ideal G){
     ideal S = quotient(F_all, G_all);
 
     list SA;
-    int flag = 0;
     for (i=1; i<=size(S); i++){
         if(S[i]<VMinDPoly){
             SA[size(SA)+1] = S[i];
-            flag = 1;
         }
     }
-    
-    setring(RingVar);
-    list J1, J2;
-    list Of;
 
+    if(size(SA)){
+        setring(RingVar);
+        list SA_var = imap(RingAll, SA);
+        for(i=1; i<=size(SA_var); i++){
+            if(SA_var[i] != 1){
+                N[size(N)+1] = SA_var[i];
+            }
+        }
+    }else{
+        setring(RingVar);
+    }
+
+    list Of;
     for(i=1; i<=size(PD); i++){
         ideal Q = PD[i][1];
         ideal P = PD[i][2];
@@ -423,34 +447,11 @@ proc ppd_main(ideal E, list N, ideal G){
             h = h * leadcoef(P[j]);
         }
         if(h != 1){
-            J2[size(J2)+1] = h;
+            N[size(N)+1] = h;
         }
-        J1[size(J1)+1], Of[size(Of)+1] = ext_shape(Q, P);
+        N[size(N)+1], Of[size(Of)+1] = ext_shape(Q, P);
     }
-
-    if(flag){
-        list SA_var = imap(RingAll, SA);
-    }else{
-        list SA_var = list();
-    }
-
-    for(i=1; i<=size(SA_var); i++){
-        if(SA_var[i] != 1){
-            N[size(N)+1] = SA_var[i];
-        }
-    }
-
-    poly tempf = 1;
-    for(i=1; i<=size(J1); i++){
-        tempf = tempf * J1[i];
-    }
-    N[size(N)+1] = tempf;
-
-    poly tempf = 1;
-    for(i=1; i<=size(J2); i++){
-        tempf = tempf * J2[i];
-    }
-    N[size(N)+1] = tempf;
+    Of = cleanoff(Of);
 
     setring(RingAll);
     list old_N = imap(RingVar, N);
@@ -461,21 +462,19 @@ proc ppd_main(ideal E, list N, ideal G){
     if(!size(new_N)){
         new_N = poly(1);
     }
-
-    setring(RingVar);
-    ideal E = imap(RingAll, new_E);
-    list N = imap(RingAll, new_N);
-
-    Of = cleanoff(Of);
-    Z[size(Z)+1] = list(PD, E, N, Of);
-
-    setring(RingAll);
+    if(Check_Consistence(new_E, new_N)){
+        setring(RingVar);
+        ideal E_out = imap(RingAll, new_E);
+        list N_out = imap(RingAll, new_N);
+        Z[size(Z)+1] = list(PD, E_out, N_out, Of);
+        setring(RingAll);
+    }
 
     list tempN;
     for(i=1; i<=size(new_N); i++){
         ideal cgsE = new_E;
         cgsE[size(cgsE)+1] = new_N[i];
-        list CGS = idealcgs_main(cgsE, tempN, G_all);
+        list CGS = idealcgs_main(cgsE, tempN, F_all);
         tempN[size(tempN)+1] = new_N[i];
 
         if(size(CGS)){
@@ -552,8 +551,8 @@ proc FF_ext_shape(int q, ideal varP){
         list tempPara = imap(RingVar, Parameters);
         ideal MinPolyVar = imap(RingAll, tempMinPolyVar);
 
+        int paraminpoly = 0;
         for(i=1; i<=size(MinPolyVar); i++){
-            int paraminpoly = 0;
             for(j=1; j<=size(tempPara); j++){
                 if(MinPolyVar[i] == tempPara[j]){
                     f_shape = G[size(G)];
@@ -580,6 +579,12 @@ proc FF_ext_shape(int q, ideal varP){
     }else{
         list PQ = list();
     }
+    for(i=1; i<=size(PQ); i++){
+        if(PQ[i] != 0){
+            lcPlcQ = lcPlcQ * leadcoef(PQ[i]);
+        }
+    }
+
     poly f = imap(RingShape, f_shape);
     
     poly sus_E;
@@ -621,7 +626,7 @@ proc finitefield_ppd_main(int q, ideal E, list N, ideal G){
             ideal E_out = imap(RingAll, new_E);
             list N_out = imap(RingAll, new_N);
 
-            Z[size(Z)+1] = list(PD, E, N, list(poly(1)));
+            Z[size(Z)+1] = list(PD, E_out, N_out, list(poly(1)));
             return(Z);
         }
     }
@@ -693,7 +698,7 @@ proc finitefield_ppd_main(int q, ideal E, list N, ideal G){
     ideal cgsE = new_E + imap(RingVar, suspicious_E);
     list cgsN = Simplify_DisEqu(old_N, cgsE);
     
-    list CGS = finitefield_idealcgs_main(q, cgsE, cgsN, G_all);
+    list CGS = finitefield_idealcgs_main(q, cgsE, cgsN, F_all);
 
      if(size(CGS)){
         for(j=1; j<=size(CGS); j++){
@@ -714,8 +719,8 @@ proc finitefield_ppd_main(int q, ideal E, list N, ideal G){
     return(Z);
 }
 
-static proc cleanoff(list Of, list #){
-    int i, j, k;
+static proc cleanoff(list Of){
+    int i;
     setring(RingAll);
     list Of_all = imap(RingVar, Of);
 
@@ -728,6 +733,8 @@ static proc cleanoff(list Of, list #){
     if(!size(tempOf)){
         tempOf = poly(1);
     }
+    setring(RingVar);
+    return(imap(RingAll, tempOf));
 }
 
 static proc FF_cleanoff(int q, list Of){
