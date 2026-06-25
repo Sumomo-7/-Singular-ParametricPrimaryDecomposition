@@ -1,0 +1,464 @@
+//////////////////////////////////////////////////////////////////////////////
+version="version modulecgs.lib 0.0.2, Oct27th, 2025"; // $Id: N/A $
+category="General purpose";
+info="
+LIBRARY:  modulecgs.lib      implementation for comprehensive Groebner systems
+AUTHOR:  Jiaqi LI (1425537@ed.tus.ac.jp, Tokyo University of Science)
+OVERVIEW:
+Computing comprehensive Groebner systems for ideals, which serves as
+a preparation for computing for comprehensive Groebner systems for 
+free submodules over polynomial rings with parameters.
+
+PROCEDURES:
+  idealcgs(*);     comprehensive Groebner systems for ideal
+  mdb(*);     minimal dickson basis for a groebner basis of ideals or submodules
+  optmdb(*);    minimal dickson basis, computed with huristic optimization applied
+  modulecgs(*);     comprehensive Groebner systems for module
+  parasyz(*); 
+
+KEYWORDS: comprehensive Groebner system, free module
+";
+///////////////////////////////////////////////////////////////////////////////
+LIB "primdec.lib";
+
+static proc polys_restrict_v(ideal Polys){
+  return(polys_separate_v_p(Polys)[1]);
+}
+
+static proc polys_restrict_p(ideal Polys){
+  return(polys_separate_v_p(Polys)[2]);
+}
+
+static proc polys_separate_v_p(ideal Polys){
+  ideal R_v;
+  ideal R_p;
+  poly P;
+  int length = size(Polys);
+
+  for (int i = 1; i <= length; i++){
+    P = Polys[i];
+    if (P < VMinDPoly){
+      R_p[size(R_p)+1] = P;
+    }else{
+      R_v[size(R_v)+1] = P;
+    }
+  }
+  return(list(R_v, R_p));
+}
+
+static proc list2ideal(list L){
+    ideal I;
+    for(int i=1; i<=size(L); i++){
+        I[size(I)+1] = L[i];
+    }
+    return(I);
+}
+
+static proc flatten2ideal(list L){
+    ideal FL;
+    for(int i=1; i<=size(L); i++){
+        for(int j=1; j<=size(L[i]); j++){
+            FL[size(FL)+1] = L[i][j];
+        }
+    }
+    return(FL);
+}
+
+static proc inconsistent(ideal E, ideal N){
+    // ideal E must be a standard basis of a radical ideal
+    int i;
+    for(i=1; i<=size(N); i++){
+        if(reduce(N[i], E, 1) != 0){
+            return(int(0));
+        }
+    }
+    return(int(1));
+}
+
+proc idealcgs(ideal E, ideal N, ideal F, list Vars, list Paras, def RingVar, def RingDis, def RingAll, string method){
+    option(redSB);
+    option(noredefine);
+
+    poly VMinDPoly = Vars[size(Vars)];
+
+    export(VMinDPoly);
+    export(RingVar, RingDis, RingAll);
+
+    setring(RingAll);/////////////////////////////////////
+    if(method == "unreduced"){
+        return(idealcgs_unreduced(E, N, F));
+    }
+    return(idealcgs_main(E, N, F));
+}
+
+proc idealcgs_main(ideal E, ideal N, ideal F){
+    int i;
+
+    list Z = list();
+
+    E = std(E);
+
+    ideal rad_E = std(radical(E));
+    
+    if (inconsistent(rad_E, N)){
+        return(Z);
+    }
+
+    ideal G = std(F + E);
+
+    ideal G1;
+    for(i=1; i<=size(G); i++){
+        if(reduce(G[i], E) != 0){
+            G1[size(G1)+1] = G[i];
+        }
+    }
+
+    ideal G_mdb = minbase(G1);
+
+    if(size(polys_restrict_v(G_mdb)) == 0){
+        if(!inconsistent(rad_E, N*G_mdb)){
+            Z[size(Z)+1] = list(rad_E, N*G_mdb, poly(1));
+        }
+        ideal E1 = E + G_mdb;
+        return(Z + idealcgs_main(E1, N, G));
+    }
+    
+    setring (RingDis);/////////////////////////////////////
+    ideal G_mdb = imap(RingAll, G_mdb);
+    poly lc_G_prod = 1;
+
+    for(i=1; i<=size(G_mdb); i++){
+        lc_G_prod = lc_G_prod * leadcoef(G_mdb[i]);
+    }
+
+    setring(RingAll);/////////////////////////////////////
+
+    poly lc_G_prod = imap(RingDis, lc_G_prod);
+
+    ideal lc_G_factors = factorize(lc_G_prod, 1);
+
+    if(!inconsistent(rad_E, N*lc_G_factors)){
+            Z[size(Z)+1] = list(rad_E, N*lc_G_factors, G_mdb);
+        }
+    for(i=1; i<=size(lc_G_factors); i++){
+        ideal E_h = E;
+        E_h[size(E_h)+1] = lc_G_factors[i];
+        Z = Z + idealcgs_main(E_h, N, F);
+        N = N*lc_G_factors[i];
+    }
+    return(Z);
+}
+
+proc idealcgs_unreduced(ideal E, ideal N, ideal F){
+    int i, j;
+
+    list Z = list();
+
+    E = std(E);
+    ideal rad_E = std(radical(E));
+    
+    if (inconsistent(rad_E, N)){
+        return(Z);
+    }
+
+    ideal G = std(F + E);
+
+    ideal G1;
+    for(i=1; i<=size(G); i++){
+        if(reduce(G[i], E) != 0){
+            G1[size(G1)+1] = G[i];
+        }
+    }
+
+    ideal G_mdb = mdb(G1);
+    
+    setring (RingDis);/////////////////////////////////////
+
+    ideal G = imap(RingAll, G);
+    ideal G_mdb = imap(RingAll, G_mdb);
+
+    list G_omega;
+    list lc_G_omega;
+
+    for(i=1; i<=size(G_mdb); i++){
+        ideal Gi;
+        ideal lc_Gi;
+        for (j=1; j<=size(G); j++){
+            if(leadmonom(G_mdb[i]) == leadmonom(G[j])){
+                Gi[size(Gi)+1] = G[j];
+                lc_Gi[size(lc_Gi)+1] = leadcoef(G[j]);
+            }
+        }
+        G_omega[size(G_omega)+1] = Gi;
+        lc_G_omega[size(lc_G_omega)+1] = lc_Gi;
+    }
+        
+    setring(RingAll);/////////////////////////////////////
+
+    list G_omega = imap(RingDis, G_omega);
+    list lc_G_omega = imap(RingDis, lc_G_omega);
+
+    for(i=1; i<=size(lc_G_omega); i++){
+        if(!inconsistent(rad_E, N*lc_G_omega[i])){
+            Z[size(Z)+1] = list(rad_E, N*flatten2ideal(lc_G_omega), flatten2ideal(G_omega));
+            break;
+        }
+    }
+    
+    for(i=1; i<=size(lc_G_omega); i++){
+        ideal E_h = E;
+        E_h = E_h + lc_G_omega[i];
+        Z = Z + idealcgs_unreduced(E_h, N, F);
+        N = N*lc_G_omega[i];
+    }
+    return(Z);
+}
+
+static proc zerocgs(ideal E, ideal N, ideal G){
+    int i;
+    list Z = list();
+
+    E = std(E);
+    ideal rad_E = std(radical(E));
+
+    ideal G_v = polys_restrict_v(G);
+    ideal G_p = polys_restrict_p(G);
+    ideal G_mdb = mdb(G_v);
+
+    setring (RingDis);/////////////////////////////////////
+
+    ideal G_mdb = imap(RingAll, G_mdb);
+    poly lc_G_prod = 1;
+
+    for(i=1; i<=size(G_mdb); i++){
+        lc_G_prod = lc_G_prod * leadcoef(G_mdb[i]);
+    }
+
+    setring(RingAll);/////////////////////////////////////
+
+    ideal G_mdb = imap(RingDis, G_mdb);
+
+    poly lc_G_prod = imap(RingDis, lc_G_prod);
+
+    ideal lc_G_factors = factorize(lc_G_prod, 1);
+
+    if(!inconsistent(rad_E, N*lc_G_factors)){
+        Z[size(Z)+1] = list("zero", G_p, N*lc_G_factors, G_mdb);
+    }
+    for(i=1; i<=size(lc_G_factors); i++){
+        ideal E_h = E;
+        E_h[size(E_h)+1] = lc_G_factors[i];
+        Z = Z + idealcgs_main(E1, N, G);
+        N = N*lc_G_factors[i];
+        }
+    return(Z);
+}
+
+proc mdb(G){
+    if(typeof(G)=="module"){
+        return(module_mdb(G));
+    }
+
+    int i, j, k, redundant;
+
+    setring(RingDis);
+    ideal G = imap(RingAll, G);
+
+    ideal lm_G;
+    for(i=1; i<=size(G); i++){
+        lm_G[size(lm_G)+1] = leadmonom(G[i]);
+    }
+
+    setring(RingVar);
+    ideal lm_G = std(imap(RingDis, lm_G));
+
+    setring(RingDis);
+    ideal lm_G = imap(RingVar, lm_G);
+
+    ideal basis;
+    for (i=1; i<=size(G); i++){
+        for(j=1; j<=size(lm_G); j++){
+            if(leadmonom(G[i]) == lm_G[j]){
+                redundant = 0;
+                for(k=1; k<=size(basis); k++){
+                    if(leadmonom(basis[k]) == leadmonom(G[i])){
+                        redundant = 1;
+                        break;
+                    }
+                }
+                if(redundant == 0){
+                    basis[size(basis)+1] = G[i];
+                }
+            }
+        }
+    }
+    setring(RingAll);
+    return(imap(RingDis, basis));
+}
+
+proc optmdb(ideal G){
+
+}
+
+proc modulecgs(ideal E, ideal N, module F, list Vars, list Paras, int rank_k, def RingVar, def RingDis, def RingAll){
+    option(redSB);
+    option(noredefine);
+
+    poly VMinDPoly = Vars[size(Vars)];
+
+    export(VMinDPoly, rank_k);
+    export(RingVar, RingDis, RingAll);
+
+    setring(RingAll);/////////////////////////////////////
+    return(modulecgs_main(E, N, F));
+}
+
+proc modulecgs_main(E, N, F){
+    int i, j;
+
+    list Z = list();
+
+    E = std(E);
+
+    module E1;
+    for(i=1; i<=size(E); i++){
+        for(j=1; j<=rank_k; j++){
+            E1[size(E1)+1] = E[i]*gen(j);
+        }
+    }
+
+    ideal rad_E = std(radical(E));
+    
+    if (inconsistent(rad_E, N)){
+        return(Z);
+    }
+
+    module G = std(F + E1);
+
+    module G1;
+    for(i=1; i<=size(G); i++){
+        if(reduce(G[i], E) != 0){
+            G1[size(G1)+1] = G[i];
+        }
+    }
+
+    module G_mdb = mdb(G1);
+    
+    setring (RingDis);/////////////////////////////////////
+
+    module G_mdb = imap(RingAll, G_mdb);
+    poly lc_G_prod = 1;
+
+    for(i=1; i<=size(G_mdb); i++){
+        lc_G_prod = lc_G_prod * leadcoef(G_mdb[i]);
+    }
+
+    int zeroflag = 0;
+    if(leadmonom(G_mdb[1]) == 1){
+        zeroflag = 1;
+    }
+
+    setring(RingAll);/////////////////////////////////////
+
+    poly lc_G_prod = imap(RingDis, lc_G_prod);
+
+    ideal lc_G_factors = factorize(lc_G_prod, 1);
+
+    if(!inconsistent(rad_E, N*lc_G_factors)){
+        Z[size(Z)+1] = list(rad_E, N*lc_G_factors, G_mdb);
+    }
+
+    for(i=1; i<=size(lc_G_factors); i++){
+        ideal E_h = E;
+        E_h[size(E_h)+1] = lc_G_factors[i];
+        Z = Z + modulecgs_main(E_h, N, F);
+        N = N*lc_G_factors[i];
+    }
+    return(Z);
+}
+
+proc module_mdb(module G){
+    int i, j, k, redundant;
+
+    setring(RingDis);
+    module G = imap(RingAll, G);
+
+    module lm_G;
+    for(i=1; i<=size(G); i++){
+        lm_G[size(lm_G)+1] = leadmonom(G[i]);
+    }
+
+    setring(RingVar);
+    module lm_G = std(imap(RingDis, lm_G));
+
+    setring(RingDis);
+    module lm_G = imap(RingVar, lm_G);
+
+    module basis;
+    for (i=1; i<=size(G); i++){
+        for(j=1; j<=size(lm_G); j++){
+            if(leadmonom(G[i]) == lm_G[j]){
+                redundant = 0;
+                for(k=1; k<=size(basis); k++){
+                    if(leadmonom(basis[k]) == leadmonom(G[i])){
+                        redundant = 1;
+                        break;
+                    }
+                }
+                if(redundant == 0){
+                    basis[size(basis)+1] = G[i];
+                }
+            }
+        }
+    }
+    setring(RingAll);
+    return(imap(RingDis, basis));
+}
+
+proc parasyz(F){
+    option(redSB);
+    option(noredefine);
+    int i, j;
+
+    int l=1;
+    for(i=1; i<=size(F); i++){
+        if(size(F[i])>l){
+            l = size(F[i]);
+        }
+    }
+
+    int rank_k = l + size(F);
+    export(rank_k);
+
+    module F1;
+    for(i=1; i<=size(F); i++){
+        F1[size(F1)+1] = F[i]+gen(i+1);
+    }
+
+    F1; 
+
+    ideal E = 0;
+    ideal N = 1;
+    list G = modulecgs_main(E, N, F1);
+
+    list Z = G;
+
+    // for(i=1; i<=size(G); i++){
+    //     int k = size(G[i][3]) - size(F);
+    //     module M = G[i][3];
+
+    //     list Zi = Z[i];
+    //     module Mk;
+    //     for(j=1; j<=(size(M)-size(F)); j++){
+    //         Mk[j] = M[j];
+    //     };
+    //     module Mk_t = transpose(Mk);
+    //     module Mk2;
+    //     for(j=2; j<=(size(Mk_t)+l); j++){
+    //         Mk2[size(Mk2)+1] = Mk_t[j];
+    //     }
+    //     Zi[3] = transpose(Mk2);
+    //     Z[i] = Zi;
+    // }
+    return(Z);
+}

@@ -1,0 +1,37 @@
+LIB "/Users/ilumualf/Desktop/M2OS/[Singular]CGS/SingularCGS/modulecgs.lib";
+
+ring RingVar = 0, (x, y), dp;
+ring RingDis = (0, a, b, c), (x, y), dp;
+ring RingAll = 0, (x, y, a, b, c), (dp(2), dp);
+
+list Vars = x, y;
+list Paras = a, b, c;
+ideal E = 0;
+ideal N = 1;
+ideal F = ax-b,by-a,cx2-y,cy2-x;
+
+idealcgs(E, N, F, Vars, Paras, RingVar, RingDis, RingAll, "unreduced");
+
+print("/////////////////////////////////////");
+
+ring RingVar = 0, (x,y), (c, dp);
+ring RingDis = (0, a, b), (x, y), (c, dp);
+ring RingAll = 0, (x, y, a, b), (c, dp);
+int rank_k = 2;
+
+list Vars = x, y;
+list Paras = a, b;
+ideal E = 0;
+ideal N = 1;
+
+module F = [ax2+by, axy2], [by2+1, 3ax];
+
+// modulecgs(E, N, F, Vars, Paras, rank_k, RingVar, RingDis, RingAll);
+
+ideal F1 = ax2+by, axy2;
+
+syz(F1);
+
+parasyz(F1);
+
+exit;

@@ -4,12 +4,12 @@ option(noredefine);
 ////Parametric Primary Decomposition////
 
 //Example 1, taken from [Y.Ishihara, K.Yokoyama - Comprehensive Systems for Primary Decompositions of Parametric Ideals, 2024]
-// ring RingAll = 0, (x, y, a, b), (lp(2), lp);
-// ring RingVar = (0, a, b), (x, y), lp;
-// ideal F = x2 - a, bxy;
-// list Paras = a, b;
-// list Vars = x, y;
-// list Indet = x, y, a, b;
+ring RingAll = 0, (x, y, a, b), (lp(2), lp);
+ring RingVar = (0, a, b), (x, y), lp;
+ideal F = x2 - a, bxy;
+list Paras = a, b;
+list Vars = x, y;
+list Indet = x, y, a, b;
 
 //Example 2, taken from [Y.Ishihara, K.Yokoyama, 2024]
 // ring RingAll = 0, (x, y, z, a, b), (dp(3), dp);
@@ -68,14 +68,14 @@ option(noredefine);
 // list Indet = x, y, a, b;
 
 //Example 9, modification of Example 4 for computation on finite field FF_7
-ring RingAll = 7, (x, y, a, b), (dp(2), dp);
-ring RingVar = (7, a, b), (x, y), dp;
-ideal F = x4 + y4 - ax2, ax2y + y3 + bx2;
-list Paras = a, b;
-list Vars = x, y;
-list Indet = x, y, a, b;
+// ring RingAll = 7, (x, y, a, b), (dp(2), dp);
+// ring RingVar = (7, a, b), (x, y), dp;
+// ideal F = x4 + y4 - ax2, ax2y + y3 + bx2;
+// list Paras = a, b;
+// list Vars = x, y;
+// list Indet = x, y, a, b;
 
-paraprimdec(F, Paras, Vars, Indet, RingVar, RingAll, 7);
+paraprimdec(F, Paras, Vars, Indet, RingVar, RingAll);
 
 // ring RingVar = (3, a, b), (x, y, z), lp;
 // ring RingAll = 3, (x, y, z, a, b), (lp(3), lp);

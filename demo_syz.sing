@@ -1,0 +1,11 @@
+LIB "/Users/ilumualf/Desktop/M1OS/A-Lab.Nabeshima/CGS/SingularCGS/modulecgs.lib";
+
+ring RingVar = 0, (x, y), (c, dp);
+ring RingDis = (0, a, b, c), (x, y), (c, dp);
+ring RingAll = 0, (x, y, a, b, c), (c, dp(2), dp);
+
+ideal F = ax+by, ax, bx, ay, by;
+
+parasyz(F);
+
+exit;

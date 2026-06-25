@@ -1,0 +1,30 @@
+//set the unit of time to be microseconds, so when we get "time: 2500", that means 2.5sec.
+system("--ticks-per-sec",1000);
+
+//d: is the directory where the file cgs.s is.
+LIB "d:\\cgs.s";
+
+//RingVar is a ring with variables (x, y), dp stands for graded reverse lex order
+ring RingVar=(0,p,q,r,a,b),(x,y),dp;
+//RingAll is a ring with variables (x,y,p,q,r,a,b). (dp(2),dp) shows the first two variable are larger than the rest ones, i.e. (x,y) >> (p,q,r,a,b), and in each block the order is dp.
+ring RingAll=0,(x,y,p,q,r,a,b),(dp(2),dp);
+//polys contains the polynomials we want to compute
+ideal polys=(1-a)*y^2-a*x^2-p*y+a*r*x*y+1, (1-b)*x^2-b*y^2-q*x+b*r*x*y+1;
+//vars is the set of variables
+list vars=x,y;
+//set of parameters
+list paras=p,q,r,a,b;
+
+//calculate the timings
+rtimer=0; 
+int aaa=rtimer; 
+//list G = cgs(polys, vars, paras, RingVar, RingAll);
+//ideal() contains the initial equality constraints. list() contains the initial disequality constraints, but remark that when input list(a, b), this means a<>0 and b<>0 at the same time.
+list G = cgs(polys,ideal(), list(), vars, paras, RingAll, RingVar);
+
+//display the time, 1000 means 1 sec
+print("time: "+string(rtimer-aaa));
+//print the branches in a beautifful form
+StringCGS(G);
+//print the number of branches.
+print("branch: "+string(size(G)));

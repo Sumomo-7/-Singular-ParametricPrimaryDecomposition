@@ -1,0 +1,137 @@
+LIB "qhmoduli.lib";
+LIB "primdec.lib";
+
+proc prod_list(list L)
+{
+    poly p = 1;
+    for(int i=1; i<=size(L); i++){
+        p = p * L[i];
+    }
+    return p;
+}
+
+proc intersection_of_lists(list L1, list L2)
+{
+    list intersection = list();
+    for(int i=1; i<=size(L1); i++){
+        for(int j=1; j<=size(L2); j++){
+            if(L1[i] == L2[j]){
+                intersection = intersection + L1[i];
+            }
+        }
+    }
+    return(intersection);
+}
+
+proc optimized_MDBasis(list G, list u_part, list x_part)
+{
+    ring distinguished_ring = (0, u_part), x_part, dp;
+
+    if(size(G) == 0){
+        print("Notice: An empty set has been given to proc optimized_MDBasis, returning int(0).");
+        return(int(0));
+    }
+
+    list lm_G = polys(lm(ideal(G)));
+
+    list G2 = list();
+    for(int i=1; i<=size(lm_G); i++){
+        for(int j=1; j<=size(G); j++){
+            if(lm_G[i] == lm(G[j])){
+                int replace = 0;
+                for(int k=1; k<=size(G2); k++){
+                    if(lm(G2[k]) == lm_G[i]){
+                        int replace = 1;
+                        poly prod_lc_G2 = prod_list(lc(ideal(G2)));
+
+                        ring parameters_ring = 0, u_part, dp;//RING CHANGED
+                        list factorized_lc_G2_on_parameters_ring = factorize(imap(distinguished_ring, prod_lc_G2));
+                        if (Max(factorize(imap(distinguished_ring, lc(G[j])))[2]) < Max(factorized_lc_G2_on_parameters_ring[2])){
+                            G2[k] = G[j];
+                        }else if(size(intersection_of_lists(factorize(imap(distinguished_ring, lc(G[j])))[1], factorized_lc_G2_on_parameters_ring[1])) \
+                    > size(intersection_of_lists(factorize(imap(distinguished_ring, lc(G2[k])))[1], factorized_lc_G2_on_parameters_ring[1]))){
+                            G2[k] = G[j];
+                        }
+                    }
+                }
+                if(replace == 0){
+                    G2 = G2 + G[j];
+                }
+            }
+        }
+    }
+    return(G2);
+}
+
+proc ideal_CGS(list E, list N, list F, list u_part, list x_part){
+    //ring R = 0, concat(u_part,x_part), (dp(size(u_part)), dp(size(x_part)));
+    //ring parameters_ring = 0, u_part, dp;
+    print("Starting ideal_CGS computation...");
+    ring distinguished_ring = (0, u_part), x_part, dp;
+
+    list Z = list();
+
+    ideal G = std(F); //on distinguished_ring
+
+    print("Computed std(F) on distinguished_ring.");
+    list G_MDB_original = optimized_MDBasis(G, u_part, x_part);
+    ideal G_MDB = ideal(imap(distinguished_ring, G_MDB_original));//on distinguished_ring
+
+    poly prod_lc_MDB_G = prod_list(lc(G_MDB));
+
+    ring parameters_ring = 0, u_part, dp;
+    list lc_MDB_G_factors = factorize(imap(distinguished_ring, prod_lc_MDB_G))[1];
+
+    for(i=1; i<=size(lc_MDB_G_factors); i++){
+        Z = Z + KSW_CGB(list(lc_MDB_G_factors[i]), N, polys(G), u_part, x_part);
+        N = N*lc_MDB_G_factors[i];
+    }
+    return(Z);
+}
+
+proc KSW_CGB(list E, list N, list F, list u_part, list x_part)
+{
+    list Z = list();
+
+    ring distinguished_ring = (0, u_part), x_part, dp;
+
+    poly prod_N = prod_list(N);
+    ring parameters_ring = 0, u_part, dp;//RING CHANGED
+    list factorized_N_on_parameters_ring = factorize(imap(distinguished_ring, prod_N))[1];
+
+    ring R = 0, concat(u_part,x_part), (dp(size(u_part)), dp(size(x_part)));//RING CHANGED
+    ideal G = std(F+E); //on R
+    ideal E = std(E); //on R
+
+    list G2 = list();
+    for(int i=1; i<=size(polys(G)); i++){
+        if(reduce(polys(G)[i], E, 1) != 0){
+            G2 = G2 + polys(G)[i];
+        }
+    }
+    if (size(G2) == 0){
+        return(list((polys(E), factorized_N_on_parameters_ring, list(int(0)))));
+    }
+
+    list G2_MDB_original = optimized_MDBasis(G2, u_part, x_part);
+    Z = Z + list((polys(E), factorized_N_on_parameters_ring, G2_MDB_original));
+    
+    ring distinguished_ring = (0, u_part), x_part, dp;//RING CHANGED
+    ideal G2_MDB = std(G2_MDB_original);//on distinguished_ring
+    poly prod_lc_MDB_G2 = prod_list(lc(G2_MDB));
+    
+    ring parameters_ring = 0, u_part, dp;//RING CHANGED
+    list lc_MDB_G2_factors = factorize(imap(distinguished_ring, prod_lc_MDB_G2))[1];
+
+    for (int i=1; i<=size(lc_MDB_G2_factors); i++){
+        list E1 = polys(E)+list(lc_MDB_G2_factors[i]);
+        ideal radical_E1 = radical(ideal(E1));
+        for(int j=1; j<=size(factorized_N_on_parameters_ring); j++){
+            if(reduce(factorized_N_on_parameters_ring[j], radical_E1, 1) != 0){
+                Z = Z + KSW_CGB(polys(radical_E1), factorized_N_on_parameters_ring, F, u_part, x_part);
+                factorized_N_on_parameters_ring = list(ideal(factorized_N_on_parameters_ring) * factorized_N_on_parameters_ring[j]);
+            }
+        }
+    }
+    return(Z);
+}

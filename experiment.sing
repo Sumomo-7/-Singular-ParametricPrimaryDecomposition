@@ -1,0 +1,17 @@
+LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/NABESHIMAcgs.lib";
+typeof(idealcgs);
+option(redSB);
+option(noredefine);
+
+ring RingVar = (7, a), (x), dp;
+ring RingAll = 7, (x, a), (dp(1), dp);
+
+list Vars = x;
+list Paras = a;
+ideal E = a3 -1 ;
+list N = poly(1);
+ideal F = x2 - a, x7-x;
+
+idealcgs(E, N, F, Paras, Vars, RingVar, RingAll, 7);
+
+exit;
