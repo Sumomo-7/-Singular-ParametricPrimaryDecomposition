@@ -6,7 +6,7 @@ The project is currently under active development. The implementation may change
 ## Overview
 
 **`paraprimdec(F, Paras, Vars, Indet, RingVar, RingAll, [, q])`**\
-The main function of the library. `paraprimdec` computes a comprehensive primary decomposition system of the parametric polynomial ideal $\langle F \rangle \subseteq \mathbb{Q}[A][X]$. \
+The main function of the library. `paraprimdec` computes a comprehensive primary decomposition system of the parametric polynomial ideal $\langle F \rangle \subseteq \mathbb{Q}[A][X]$.
 
 **Given**
 - `F`: finite set of $\mathbb{Q}[A][X]$,
@@ -21,15 +21,15 @@ The main function of the library. `paraprimdec` computes a comprehensive primary
 **Find**
 
 `[[[[Q_{11}, P_{11}], ..., [Q_{1r_1}, P_{1r_1}]], E_1, N_1, T_1], ..., [[[Q_{s1}, P_{s1}], ..., [Q_{sr_s}, P_{sr_s}]], E_s, N_s, T_s]]`, where
-- `[[Q_{i1}, P_{i1}], ..., [Q_{ir_i}$, P_{ir_i}]]`: a list of pairs of primary ideal $Q_{ij}$ of $\mathbb Q[A][X]$ and its asscociated prime, as well as its radical $P_{ij}$,
+- `[[Q_{i1}, P_{i1}], ..., [Q_{ir_i}$, P_{ir_i}]]`: a list of pairs of primary ideal $Q_{ij}$ of $\mathbb{Q}[A][X]$ and its asscociated prime, as well as its radical $P_{ij}$,
 - `E_i`: ideal of $\mathbb Q[A]$,
 - `N_i`: list of polynomials of $\mathbb Q[A]$,
-- `T_i`: list of irreducible polynomials of $mathbb Q[A][X]$, 
+- `T_i`: list of irreducible polynomials of $\mathbb{Q}[A][X]$, \
 such that for parameter values $\alpha \in \mathbb{V}(E_i) \setminus \mathbb{V}(\prod_{g \in N_i}h)$, if for ever polynomial $f(A, X)$ of $T_i$, the specialized polynomial $\sigma_\alpha(f) = f(\alpha, X)$ is irrducible on $\mathbb{Q}[X]$, then $\{\sigma_\alpha(Q_{i1}), \ldots, \sigma_\alpha(Q_{ir_i})\}$ is a primary decomposition of the ideal $\langle \sigma_\alpha(F) \rangle$ ($i = 1, \ldots, s$).
 
 ## Example
 
-```C++:singular
+```C++:singular.sing
 LIB "path/to/PARAprimdec.lib";
 option(redSB);
 option(noredefine);
@@ -132,15 +132,40 @@ paraprimdec(F, Paras, Vars, Indet, RingVar, RingAll);
       [1]:
          x2+(-a)
 ```
+Take a look at the first branch of the output:
+```
+[1]:
+   [1]:
+      [1]:
+         [1]:
+            _[1]=y
+            _[2]=x2+(-a)
+         [2]:
+            _[1]=y
+            _[2]=x2+(-a)
+   [2]:
+      _[1]=0
+   [3]:
+      [1]:
+         (a)
+      [2]:
+         (b)
+   [4]:
+      [1]:
+         x2+(-a)
+```
+this means that for parameters specialization $(a, b) \in \mathbb{Q}^2$ s.t. $a \neq 0$ nor $b \neq 0$, $\langle y, x^2-a \rangle$ will be the primary decomposition for ideal $\langle F \rangle = \langle x^2 - a, bxy \rangle$ if $x^2-a$ is irreducible in $\mathbb{Q}[X]$. For example, 
+- $(a, b) = (3, 1)$, then $\langle y, x^2-3 \rangle$ is the primary decomposition for $\langle x^2 - 3, xy \rangle$, 
+- $(a, b) = (4, 1)$, then $\langle y, x^2-4 \rangle$ is **NOT** a primary decomposition for $\langle x^2 - 4, xy \rangle$, since $x^2-4$ is reducible and $\langle y, x^2-4 \rangle = \langle y, x-2 \rangle \cap \langle y, x+2 \rangle$. 
 
 
 ## Installation
-This package consists of a single Singular library file, `PARAprimdec.lib`.
+This package consists of a single SINGULAR library file, `PARAprimdec.lib`.
 
-Download `PARAprimdec.lib` from this repository and load it into Singular by executing
+Download `PARAprimdec.lib` from this repository and load it into SINGULAR by executing
 ```
 singular LIB "path/to/PARAprimdec.lib"; 
 ```
-where path/to/ should be replaced by the actual location of the file on your system.
+where `path/to/` should be replaced by the actual location of the file on your system.
 
-After the library has been loaded successfully, all procedures provided by the package become available in the current Singular session.
+After the library has been loaded successfully, procedures provided by the package become available in the current SINGULAR session.
