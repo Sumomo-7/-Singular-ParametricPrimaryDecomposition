@@ -1155,6 +1155,11 @@ static proc FF_Check_Consistence(int q, ideal E, list N){
     if(!size(N) && reduce(poly(1), E)!=0){
         return(1);
     }
+
+    if(reduce(poly(1), E)==0){
+        return(0);
+    }
+
     for(i=1; i<=size(Parameters_all); i++){
         poly tempU = Parameters_all[i];
         E[size(E)+1] = tempU^q - tempU;
@@ -1188,7 +1193,7 @@ static proc FF_multivarfactor(int q, poly varf, list varU){
     return( FF_univarfactor(q, imap(RingAll, phi_f)) );
 }
 
-proc FF_univarfactor(int q, poly varf){
+static proc FF_univarfactor(int q, poly varf){
     int i, j;
     int d = deg(leadmonom(varf));
 
@@ -1206,14 +1211,4 @@ proc FF_univarfactor(int q, poly varf){
     }
     setring(RingVar);
     return(imap(RingAll, tempN));
-}
-
-static proc ideal_contained(ideal I, ideal J){
-    int i;
-    for(i=1; i<=size(I);i++){
-        if(reduce(I[i], J)!=0){
-            return(0);
-        }
-    }
-    return(1);
 }
