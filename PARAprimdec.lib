@@ -230,7 +230,7 @@ proc ext_shape(ideal varQ, ideal varP){
     ideal lead_P = imap(RingVar, tempLead);
     list Var = imap(RingVar, Variables);
 
-    intvec U = indepSet(std(lead_P));
+    intvec U = indepSet(groebner(lead_P));
 
     list XUX, UX;
     for (i = 1; i <= size(Var); i++){
@@ -340,7 +340,7 @@ proc ext_shape(ideal varQ, ideal varP){
     return(lcPlcQ, f);
 }
 
-proc paraprimdec(ideal F, list Paras, list Vars, list Indet, def RingVar, def RingAll, list #){
+proc paraprimdec(ideal F, list Paras, list Vars, def RingVar, def RingAll, list #){
     //イデアルFがRingVarの下で与えられたと仮定する。
     option(redSB);
     option(noredefine);
@@ -348,7 +348,8 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet, def RingVar, def Ri
 
     list Parameters = Paras;
     list Variables = Vars;
-    list Indeterminates = Indet;
+    list Indeterminates = Vars + Paras;
+    Indeterminates;
     poly VMinDPoly_var = Vars[size(Vars)];
     list Checks = 0, 0, 0, 0, 0, 0;
 
@@ -365,8 +366,8 @@ proc paraprimdec(ideal F, list Paras, list Vars, list Indet, def RingVar, def Ri
     
     setring(RingVar);
     ideal E = poly(0);
-    list N = list();
-    ideal G = std(F);
+    list N = poly(1);
+    ideal G = groebner(F);
 
     if(size(#)){
         int q = #[1];
@@ -389,7 +390,7 @@ proc ppd_main(ideal E, list N, ideal G){
         if(zerocheck == 0 || zerocheck == 1){
             setring(RingAll);
             list old_N = imap(RingVar, N);
-            ideal E_all = std(imap(RingVar, E));
+            ideal E_all = groebner(imap(RingVar, E));
             ideal new_E = Radical_Equ(E_all);
             list new_N = Simplify_DisEqu(old_N, E_all);
             new_E = Simplify_Equ(new_E, new_N);
@@ -401,7 +402,6 @@ proc ppd_main(ideal E, list N, ideal G){
             list N_out = imap(RingAll, new_N);
 
             Z[size(Z)+1] = list(PD, E_out, N_out, list(poly(1)));
-            return(Z);
         }
     }
 
@@ -421,11 +421,9 @@ proc ppd_main(ideal E, list N, ideal G){
     if(size(SA)){
         setring(RingVar);
         list SA_var = imap(RingAll, SA);
-        for(i=1; i<=size(SA_var); i++){
-            if(SA_var[i] != 1){
-                N[size(N)+1] = SA_var[i];
-            }
-        }
+        int r = random(1, size(SA_var));
+        N[size(N)+1] = SA_var[r];
+        kill(r);
     }else{
         setring(RingVar);
     }
@@ -455,7 +453,7 @@ proc ppd_main(ideal E, list N, ideal G){
 
     setring(RingAll);
     list old_N = imap(RingVar, N);
-    ideal E_all = std(imap(RingVar, E));
+    ideal E_all = groebner(imap(RingVar, E));
     ideal new_E = Radical_Equ(E_all);
     list new_N = Simplify_DisEqu(old_N, E_all);
     new_E = Simplify_Equ(new_E, new_N);
@@ -478,6 +476,7 @@ proc ppd_main(ideal E, list N, ideal G){
         tempN[size(tempN)+1] = new_N[i];
 
         if(size(CGS)){
+            CGS;
             for(j=1; j<=size(CGS); j++){
                 ideal tempG, tempE;
                 list tempN;
@@ -510,7 +509,7 @@ proc FF_ext_shape(int q, ideal varP){
     ideal lead_P = imap(RingVar, tempLead);
     list Var = imap(RingVar, Variables);
 
-    intvec U = indepSet(std(lead_P));
+    intvec U = indepSet(groebner(lead_P));
 
     list XUX, UX;
     for (i = 1; i <= size(Var); i++){
@@ -601,7 +600,11 @@ proc FF_ext_shape(int q, ideal varP){
     }
     lcPlcQ = lcPlcQ * leadcoef(f);
 
-    return(sus_E, lcPlcQ, f);
+    if(sus_E == poly(1)){
+        return(poly(0), lcPlcQ, f);
+    }else{
+        return(sus_E, lcPlcQ, f);
+    }
 }
 
 proc finitefield_ppd_main(int q, ideal E, list N, ideal G){
@@ -615,19 +618,22 @@ proc finitefield_ppd_main(int q, ideal E, list N, ideal G){
         if(zerocheck == 0 || zerocheck == 1){
             setring(RingAll);
             list old_N = imap(RingVar, N);
-            ideal E_all = std(imap(RingVar, E));
+            ideal E_all = groebner(imap(RingVar, E));
             ideal new_E = Radical_Equ(E_all);
             list new_N = Simplify_DisEqu(old_N, E_all);
             new_E = Simplify_Equ(new_E, new_N);
             if(!size(new_N)){
                 new_N = poly(1);
             }
-            setring(RingVar);
-            ideal E_out = imap(RingAll, new_E);
-            list N_out = imap(RingAll, new_N);
+            if(FF_Check_Consistence(q, new_E, new_N)){
+                setring(RingVar);
+                ideal E_out = imap(RingAll, new_E);
+                list N_out = imap(RingAll, new_N);
 
-            Z[size(Z)+1] = list(PD, E_out, N_out, list(poly(1)));
-            return(Z);
+                Z[size(Z)+1] = list(PD, E_out, N_out, list(poly(1)));
+            }else{
+                setring(RingVar);
+            }
         }
     }
 
@@ -646,16 +652,15 @@ proc finitefield_ppd_main(int q, ideal E, list N, ideal G){
     if(size(SA)){
         setring(RingVar);
         list SA_var = imap(RingAll, SA);
-        for(i=1; i<=size(SA_var); i++){
-            if(SA_var[i] != 1){
-                N[size(N)+1] = SA_var[i];
-            }
-        }
+        int r = random(1, size(SA_var));
+        N[size(N)+1] = SA_var[r];
+        kill(r);
     }else{
         setring(RingVar);
     }
     list Of;
     ideal suspicious_E;
+    poly sus_E;
 
     for(i=1; i<=size(PD); i++){
         ideal Q = PD[i][1];
@@ -675,12 +680,13 @@ proc finitefield_ppd_main(int q, ideal E, list N, ideal G){
         if(h != 1){
             N[size(N)+1] = h;
         }
-        suspicious_E[size(suspicious_E)+1], N[size(N)+1], Of[size(Of)+1] = FF_ext_shape(q, P);
+        sus_E, N[size(N)+1], Of[size(Of)+1] = FF_ext_shape(q, P);
+        suspicious_E = suspicious_E + sus_E;
     }
 
     setring(RingAll);
     list old_N = imap(RingVar, N);
-    ideal E_all = std(imap(RingVar, E));
+    ideal E_all = groebner(imap(RingVar, E));
     ideal new_E = Radical_Equ(E_all);
     list new_N = Simplify_DisEqu(old_N, E_all);
     new_E = Simplify_Equ(new_E, new_N);
@@ -695,24 +701,33 @@ proc finitefield_ppd_main(int q, ideal E, list N, ideal G){
         setring(RingAll);
     }
 
-    ideal cgsE = new_E + imap(RingVar, suspicious_E);
-    list cgsN = Simplify_DisEqu(old_N, cgsE);
-    
-    list CGS = finitefield_idealcgs_main(q, cgsE, cgsN, F_all);
+    ideal cgsE = groebner(new_E + imap(RingVar, suspicious_E));
+    cgsE = Radical_Equ(cgsE);
+    list cgsN = Simplify_DisEqu(new_N, cgsE);
 
-     if(size(CGS)){
-        for(j=1; j<=size(CGS); j++){
-            ideal tempG, tempE;
-            list tempN;
-            tempE, tempN, tempG = CGS[j][1],  CGS[j][2], CGS[j][3];
+    list tempN;
+    for(i=1; i<=size(new_N); i++){
+        ideal cgsE = new_E;
+        cgsE[size(cgsE)+1] = new_N[i];
+        list CGS = finitefield_idealcgs_main(q, cgsE, tempN, F_all);
+        tempN[size(tempN)+1] = new_N[i];
 
-            setring(RingVar);
-            ideal ppdG, ppdE;
-            list ppdN;
-            ppdE, ppdN, ppdG = imap(RingAll, tempE), imap(RingAll, tempN), imap(RingAll, tempG);
-            Z = Z + finitefield_ppd_main(q, ppdE, ppdN, ppdG);
+        if(size(CGS)){
+            for(j=1; j<=size(CGS); j++){
+                ideal tempG, tempE;
+                list tempN;
+                tempE, tempN, tempG = CGS[j][1],  CGS[j][2], CGS[j][3];
+
+                //if(tempG[1] != poly(1)){
+                setring(RingVar);
+                ideal ppdG, ppdE;
+                list ppdN;
+                ppdE, ppdN, ppdG = imap(RingAll, tempE), imap(RingAll, tempN), imap(RingAll, tempG);
+                Z = Z + finitefield_ppd_main(q, ppdE, ppdN, ppdG);
+                //}
         
-            setring(RingAll);
+                setring(RingAll);
+            }
         }
     }         
     setring(RingVar);
@@ -764,7 +779,7 @@ static proc FF_cleanoff(int q, list Of){
         int d = deg(leadmonom(imap(RingAll, f)));
         setring(RingAll);
         for(j=1; j<=d-1; j++){
-            ideal Gr = std(f, (miniVar^q)^j - miniVar);
+            ideal Gr = groebner(f, (miniVar^q)^j - miniVar);
             for(k=1; k<=size(Gr); k++){
                 if(Gr[k] < VMinDPoly){
                     tempN = tempN * Gr[k];
@@ -808,7 +823,7 @@ static proc Radical_Equ(ideal Equ){
   }
 
   if (size(SqrEqu)){
-    return(std(Equ + SqrEqu));
+    return(groebner(Equ + SqrEqu));
   }
   else{
     return(Equ);
@@ -866,7 +881,7 @@ static proc Simplify_Equ(ideal Equ, list DisEqu){
             continue;
         }
 
-        tempGB = std(newEqu + (DisEqu[i] * VMinDPoly - 1));
+        tempGB = groebner(newEqu + (DisEqu[i] * VMinDPoly - 1));
         if (tempGB[1] == 1){
             return(ideal(1)); //may incur error
         }
@@ -879,7 +894,7 @@ static proc Simplify_Equ(ideal Equ, list DisEqu){
             }
         }
     }
-    return(std(newEqu));
+    return(groebner(newEqu));
 }
 
 //Checks=[total, tri-check, 0dim-check, c-check, i-check, gen-check];
@@ -918,7 +933,7 @@ proc Check_Consistence(ideal Equ, list DisEqu){
     for (i = 1; i <= size(Equ); i++){
         LM = LM + leadmonom(Equ[i]);
     }
-    LM = std(LM);
+    LM = groebner(LM);
     intvec Indvec = indepSet(LM);
     
     list Indvar;
@@ -937,7 +952,7 @@ proc Check_Consistence(ideal Equ, list DisEqu){
                 //例えば(10, 20, 30)でパラメータ(a, b, c)を特化したいならば、イデアル<a-10, b-20, c-30>とEの和イデアルのGroebner基底を求めるといい。
             }
             
-            tempGB = std(Equ + Spe + (DE * VMinDPoly - 1));
+            tempGB = groebner(Equ + Spe + (DE * VMinDPoly - 1));
 
             if (tempGB[1] != 1){
                 Checks[4] = Checks[4] + 1;
@@ -949,7 +964,7 @@ proc Check_Consistence(ideal Equ, list DisEqu){
     int itimes = 3;
     poly newDE = DE;
     poly res, tempDE;
-    tempGB = std(Equ);
+    tempGB = groebner(Equ);
     for (i = 1; i <= itimes; i++){
         if (size(newDE) > 20){
             break;
@@ -969,7 +984,7 @@ proc Check_Consistence(ideal Equ, list DisEqu){
 
 
   //general check
-    tempGB = std(Equ + (DE * VMinDPoly - 1));
+    tempGB = groebner(Equ + (DE * VMinDPoly - 1));
     if (tempGB[1] == 1){
         Checks[6] = Checks[6] + 1;
         return(0);
@@ -981,7 +996,7 @@ proc Check_Consistence(ideal Equ, list DisEqu){
 
 proc idealcgs_main(ideal E, list N, ideal F){
     int i;
-    ideal new_E = std(E);
+    ideal new_E = groebner(E);
     new_E = Radical_Equ(new_E);
     list new_N = Simplify_DisEqu(N, new_E);
     new_E = Simplify_Equ(new_E, new_N);
@@ -990,7 +1005,7 @@ proc idealcgs_main(ideal E, list N, ideal F){
         return(list());
     }
 
-    ideal G = std(F + new_E);
+    ideal G = groebner(F + new_E);
 
     if (G[1] == 1){
         return(list(list(new_E, new_N, ideal(1))));
@@ -1017,7 +1032,7 @@ proc idealcgs_main(ideal E, list N, ideal F){
         if (Check_Consistence(new_E, new_N + list(tempP))){
             Z = Z + list(list(new_E, new_N + list(tempP), ideal(1)));
         }
-        new_E = std(new_E + tempP);
+        new_E = groebner(new_E + tempP);
     }
 
     ideal Gm;
@@ -1058,7 +1073,7 @@ static proc MDBasis(G){
 
     setring(RingAll);
     ideal lm_G = imap(RingVar, lm_G);
-    lm_G = std(lm_G);
+    lm_G = groebner(lm_G);
 
     setring(RingVar);
     ideal lm_G = imap(RingAll, lm_G);
@@ -1087,7 +1102,7 @@ static proc MDBasis(G){
 proc finitefield_idealcgs_main(int q, ideal E, list N, ideal F){
     //K.Tanakaによる有限体上のCGS計算方法。Consistence Check以外は著しい変更はない。
     int i;
-    ideal new_E = std(E);
+    ideal new_E = groebner(E);
     new_E = Radical_Equ(new_E);
     list new_N = Simplify_DisEqu(N, new_E);
     new_E = Simplify_Equ(new_E, new_N);
@@ -1096,7 +1111,7 @@ proc finitefield_idealcgs_main(int q, ideal E, list N, ideal F){
         return(list());
     }
 
-    ideal G = std(F + new_E);
+    ideal G = groebner(F + new_E);
 
     if (G[1] == 1){
         return(list(list(new_E, new_N, ideal(1))));
@@ -1123,7 +1138,7 @@ proc finitefield_idealcgs_main(int q, ideal E, list N, ideal F){
         if (FF_Check_Consistence(q, new_E, new_N + list(tempP))){
             Z = Z + list(list(new_E, new_N + list(tempP), ideal(1)));
         }
-        new_E = std(new_E + tempP);
+        new_E = groebner(new_E + tempP);
     }
 
     ideal Gm;
@@ -1146,6 +1161,10 @@ proc finitefield_idealcgs_main(int q, ideal E, list N, ideal F){
         Z = Z + finitefield_idealcgs_main(q, tempE, tempN, G);
         tempN[size(tempN)+1] = LCFactors[i];
     }
+
+    // new_E = new_E + ideal(LCoefs);
+    // Z = Z + finitefield_idealcgs_main(q, new_E, Simplify_DisEqu(N, new_E), G);
+
     return(Z);
 }
 
@@ -1165,7 +1184,7 @@ static proc FF_Check_Consistence(int q, ideal E, list N){
         E[size(E)+1] = tempU^q - tempU;
     }
 
-    ideal E = std(E);
+    ideal E = groebner(E);
 
     for(i=1; i<=size(N); i++){
         if(reduce(N[i], E) != 0){
@@ -1202,7 +1221,7 @@ static proc FF_univarfactor(int q, poly varf){
     poly miniVar = variables(f)[1];
     poly tempN = 1;
     for(i=1; i<=d-1; i++){
-        ideal Gr = std(f, (miniVar^q)^i - miniVar);
+        ideal Gr = groebner(f, miniVar^((q)^(d-1)) - miniVar);
         for(j=1; j<=size(Gr); j++){
             if(Gr[j] < VMinDPoly){
                 tempN = tempN * Gr[j];
