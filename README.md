@@ -5,14 +5,13 @@ The project is currently under active development. The implementation may change
 
 ## Overview
 
-**`paraprimdec(F, Paras, Vars, Indet, RingVar, RingAll, [, q])`**\
+**`paraprimdec(F, Paras, Vars, RingVar, RingAll, [, q])`**\
 The main function of the library. `paraprimdec` computes a comprehensive primary decomposition system of the parametric polynomial ideal $\langle F \rangle \subseteq \mathbb{Q}[A][X]$.
 
 **Given**
 - `F`: finite set of $\mathbb{Q}[A][X]$,
 - `Paras`: list of paramters,
 - `Vars`: list of variables,
-- `Indet`: list of all indeterminant,
 - `RingVar`: polynomial ring where only elements of `Vars` are considered as variables while elements of `Paras` are used for transcendental extension,
 - `RingAll`: polynomial ring where both elements of `Vars` and `Paras` considered as variables,
 - `q`(optional): if specified, computations are performed over the finite field $\mathbb{F}_q$, if `q` is omitted, all computations are performed over the field of rational numbers $\mathbb Q$.
@@ -25,7 +24,7 @@ The main function of the library. `paraprimdec` computes a comprehensive primary
 - `E_i`: ideal of $\mathbb Q[A]$,
 - `N_i`: list of polynomials of $\mathbb Q[A]$,
 - `T_i`: list of irreducible polynomials of $\mathbb{Q}[A][X]$, \
-such that for parameter values $\alpha \in \mathbb{V}(E_i) \setminus \mathbb{V}(\prod_{g \in N_i}h)$, if for ever polynomial $f(A, X)$ of $T_i$, the specialized polynomial $\sigma_\alpha(f) = f(\alpha, X)$ is irrducible on $\mathbb{Q}[X]$, then $\{\sigma_\alpha(Q_{i1}), \ldots, \sigma_\alpha(Q_{ir_i})\}$ is a primary decomposition of the ideal $\langle \sigma_\alpha(F) \rangle$ ($i = 1, \ldots, s$).
+such that for parameter values $\alpha \in \mathbb{V}(E_i) \setminus \mathbb{V}(\prod_{h \in N_i}h)$, if for ever polynomial $f(A, X)$ of $T_i$, the specialized polynomial $\sigma_\alpha(f) = f(\alpha, X)$ is irrducible on $\mathbb{Q}[X]$, then $\{\sigma_\alpha(Q_{i1}), \ldots, \sigma_\alpha(Q_{ir_i})\}$ is a primary decomposition of the ideal $\langle \sigma_\alpha(F) \rangle$ ($i = 1, \ldots, s$).
 
 ## Example
 

@@ -349,7 +349,6 @@ proc paraprimdec(ideal F, list Paras, list Vars, def RingVar, def RingAll, list 
     list Parameters = Paras;
     list Variables = Vars;
     list Indeterminates = Vars + Paras;
-    Indeterminates;
     poly VMinDPoly_var = Vars[size(Vars)];
     list Checks = 0, 0, 0, 0, 0, 0;
 
@@ -476,7 +475,6 @@ proc ppd_main(ideal E, list N, ideal G){
         tempN[size(tempN)+1] = new_N[i];
 
         if(size(CGS)){
-            CGS;
             for(j=1; j<=size(CGS); j++){
                 ideal tempG, tempE;
                 list tempN;
@@ -1184,7 +1182,7 @@ static proc FF_Check_Consistence(int q, ideal E, list N){
         E[size(E)+1] = tempU^q - tempU;
     }
 
-    ideal E = groebner(E);
+    E = groebner(E);
 
     for(i=1; i<=size(N); i++){
         if(reduce(N[i], E) != 0){
@@ -1200,7 +1198,7 @@ static proc FF_multivarfactor(int q, poly varf, list varU){
 
     list U = imap(RingVar, varU);
     ideal beta;
-    ideal F = imap(RingVar, f);
+    ideal F = imap(RingVar, varf);
 
     for(i=1; i<=size(U); i++){
         beta[i] = U[i] - random(0, q-1);
