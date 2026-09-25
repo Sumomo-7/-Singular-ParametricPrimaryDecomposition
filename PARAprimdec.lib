@@ -1020,6 +1020,29 @@ proc idealcgs_main(ideal E, list N, ideal F){
         }
     }
 
+    //For weighted monomial ordering
+    // ideal Gr_check;
+    // setring(RingVar);
+    // ideal M_var = maxideal(1);
+    // setring(RingAll);
+    // ideal M = imap(RingVar, M_var);
+    // for(i=1; i<=size(Gr);i++){
+    //     int flag = 1;
+    //     Gr[i];
+    //     for(int j=1; j<=size(M); j++){
+    //         if(subst(Gr[i], M[j], 0) != Gr[i]){
+    //             flag = 0;
+    //             break;
+    //         }
+    //     }
+    //     if(flag){
+    //         Gr_check[size(Gr_check)+1] = Gr[i];
+    //     }
+    // }
+    // Gr_check;
+    // Gr = Gr_check;
+    ////////////////////
+
     //trivial branches
     for (i = 1; i <= size(Gr); i++){
         poly tempP = reduce(Gr[i], E);
@@ -1219,7 +1242,7 @@ static proc FF_univarfactor(int q, poly varf){
     poly miniVar = variables(f)[1];
     poly tempN = 1;
     for(i=1; i<=d-1; i++){
-        ideal Gr = groebner(f, miniVar^((q)^(d-1)) - miniVar);
+        ideal Gr = groebner(f, miniVar^((q)^(i)) - miniVar);
         for(j=1; j<=size(Gr); j++){
             if(Gr[j] < VMinDPoly){
                 tempN = tempN * Gr[j];

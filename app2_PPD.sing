@@ -1,0 +1,274 @@
+LIB "numerAlg.lib";
+LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/PARAprimdec.lib";
+LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/NABESHIMAcgs.lib";
+
+option(redSB);
+option(noredefine);
+
+/////////////////////////////////////////////////
+//                                             //
+// Application 2: Singularity Resolution Check //
+//                                             //
+/////////////////////////////////////////////////
+// We use the proposed parametric primary decomposition algorithm to determine the exceptional parameter values that cause the isolated singularity at the origin to vanish for a semi-weighted homogeneous hypersurface. A list of semi-weighted homogeneous polynomials(the defining polynomials of hypersurfaces) can be found in https://doi.org/10.1007/BF01390090, we compute the primary decomposition of part of them to demonstrate a possible application of our algorithm. 
+
+proc if_vanish(list L){
+    proc equal_ideal(ideal I, ideal J){
+        int i, j;
+        if(size(I) != size(J)){
+            return(0);
+        }
+        for(i=1; i<=size(I); i++){
+            int flag = 1;
+            for(j=1; j<=size(J); j++){
+                if(I[i] == J[j]){
+                    flag = 0;
+                }
+            }
+            if(flag){
+                return(0);
+            }
+        }
+        return(1);
+    }
+    int i, j, k;
+    ideal M = maxideal(1);
+    for(i=1; i<=size(L); i++){
+        list branch = L[i][1];
+        int flag = 1;
+        for(j=1; j<=size(branch); j++){
+            ideal F = branch[j][2];
+
+            if(equal_ideal(F, M)){
+                flag = 0;
+            }
+        }
+        if(flag){
+            print("VANISH AT");
+            print(i);
+        }
+    }
+    print("END OF PROCEDURE if_vanish");
+}
+
+//Inner Modality 2
+
+//J16[Stable]
+// ring RingAll = 0, (x, y, s, t), (wp(3, 1), dp);
+// ring RingVar = (0, s, t), (x, y), wp(3, 1);
+
+// poly f = x3 + y9 + tx2y3;
+
+// ideal F = diff(f, x), diff(f, y);
+
+// list Paras = s, t;
+// list Vars = x, y;
+
+//W15[Stable]
+// ring RingAll = 0, (x, y, s, t), (wp(3, 2), dp);
+// ring RingVar = (0, s, t), (x, y), wp(3, 2);
+
+// poly f = x4 + y6 + tx2y3;
+
+// ideal F = diff(f, x), diff(f, y);
+
+// list Paras = s, t;
+// list Vars = x, y;
+
+//Z15[Stable]
+// ring RingAll = 0, (x, y, s, t), (wp(2, 1), dp);
+// ring RingVar = (0, s, t), (x, y), wp(2, 1);
+
+// poly f = x3y + y7 + tx2y3;
+
+// ideal F = diff(f, x), diff(f, y);
+
+// list Paras = s, t;
+// list Vars = x, y;
+
+//Q14[Vanish][?]
+// ring RingAll = 0, (x, y, z, s, t), (wp(4, 2, 5), dp);
+// ring RingVar = (0, s, t), (x, y, z), wp(4, 2, 5);
+
+// poly f = x3 + yz2 + tx2y2 + xy4;
+
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
+
+// list Paras = s, t;
+// list Vars = x, y, z;
+
+//S14[Stable][?]
+// ring RingAll = 0, (x, y, z, s, t), (wp(1, 2, 4), dp);
+// ring RingVar = (0, s, t), (x, y, z), wp(1, 2, 4);
+
+// poly f = x2z + yz2 + y5 + ty3z;
+
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
+
+// list Paras = s, t;
+// list Vars = x, y, z;
+
+//U14[Stable]
+// ring RingAll = 0, (x, y, z, s, t), (wp(3, 2, 3), dp);
+// ring RingVar = (0, s, t), (x, y, z), wp(3, 2, 3);
+
+// poly f = x3 + xz2 + txy3 + zy3;
+
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
+
+// list Paras = s, t;
+// list Vars = x, y, z;
+
+//Inner Modality 3
+
+//J22[Stable]
+// ring RingAll = 0, (x, y, s, t), (wp(4, 1), dp);
+// ring RingVar = (0, s, t), (x, y), wp(4, 1);
+
+// poly f = x3 + tx2y4 + y12;
+
+// ideal F = diff(f, x), diff(f, y);
+
+// list Paras = s, t;
+// list Vars = x, y;
+
+//Z21[Stable]
+// ring RingAll = 0, (x, y, s, t), (wp(3, 1), dp);
+// ring RingVar = (0, s, t), (x, y), wp(3, 1);
+
+// poly f = x3y + tx2y4 + y10;
+
+// ideal F = diff(f, x), diff(f, y);
+
+// list Paras = s, t;
+// list Vars = x, y;
+
+//W20[Vanish][?]
+// ring RingAll = 0, (x, y, z, s, t), (wp(3, 1, 4), dp);
+// ring RingVar = (0, s, t), (x, y, z), wp(3, 1, 4);
+
+// poly f = x3 + yz2 + tx2y3 + y9;
+
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
+
+// list Paras = s, t;
+// list Vars = x, y, z;
+
+//N16[Stable]
+// ring RingAll = 0, (x, y, s, t), (wp(1, 1), dp);
+// ring RingVar = (0, s, t), (x, y), wp(1, 1);
+
+// poly f = x4y + sx3y2 + tx2y3 + xy4;
+
+// ideal F = diff(f, x), diff(f, y);
+
+// list Paras = s, t;
+// list Vars = x, y;
+
+//V15 [Vanish]
+// ring RingAll = 0, (x, y, z, s, t), (wp(2, 2, 3), dp);
+// ring RingVar = (0, s, t), (x, y, z), wp(2, 2, 3);
+
+// poly f = xz2 + syz2 + x4 + tx2y2 + y4;
+
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
+
+// list Paras = s, t;
+// list Vars = x, y, z;
+
+//Inner Modality 4
+
+//J28[Stable]
+// ring RingAll = 0, (x, y, s, t), (wp(5, 1), dp);
+// ring RingVar = (0, s, t), (x, y), wp(5, 1);
+
+// poly f = x3 + tx2y5 + y15;
+
+// ideal F = diff(f, x), diff(f, y);
+
+// list Paras = s, t;
+// list Vars = x, y;
+
+//Z27[Stable]
+// ring RingAll = 0, (x, y, s, t), (wp(4, 1), dp);
+// ring RingVar = (0, s, t), (x, y), wp(4, 1);
+
+// poly f = x3y + tx2y5 + y13;
+
+// ideal F = diff(f, x), diff(f, y);
+
+// list Paras = s, t;
+// list Vars = x, y;
+
+//N22[Stable]
+// ring RingAll = 0, (x, y, s, t), (wp(3, 2), dp);
+// ring RingVar = (0, s, t), (x, y), wp(3, 2);
+
+// poly f = x4y + tx2y4 + y7;
+
+// ideal F = diff(f, x), diff(f, y);
+
+// list Paras = s, t;
+// list Vars = x, y;
+
+//Q26[Stable][?]
+// ring RingAll = 0, (x, y, z, s, t), (wp(8, 2, 11), dp);
+// ring RingVar = (0, s, t), (x, y, z), wp(8, 2, 11);
+
+// poly f = x3 + yz2 + tx2y4 + y12;
+
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
+
+// list Paras = s, t;
+// list Vars = x, y, z;
+
+//V21*[Stable]
+// ring RingAll = 0, (x, y, z, s, t), (wp(5, 2, 3), dp);
+// ring RingVar = (0, s, t), (x, y, z), wp(5, 2, 3);
+
+// poly f = x2y + z4 + ty3z2 + y6;
+
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
+
+// list Paras = s, t;
+// list Vars = x, y, z;
+
+//V18'[Stable]
+// ring RingAll = 0, (x, y, z, s, t), (wp(4, 3, 3), dp);
+// ring RingVar = (0, s, t), (x, y, z), wp(4, 3, 3);
+
+// poly f = x3 + y4 + ty2z2 + z4;
+
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
+
+// list Paras = s, t;
+// list Vars = x, y, z;
+
+//X21[Stable]
+// ring RingAll = 0, (x, y, s, t), (wp(2, 1), dp);
+// ring RingVar = (0, s, t), (x, y), wp(2, 1);
+
+// poly f = x4 + sx3y2 + tx2y4 + y8;
+
+// ideal F = diff(f, x), diff(f, y);
+
+// list Paras = s, t;
+// list Vars = x, y;
+
+//S20*[Stable]
+ring RingAll = 0, (x, y, z, s, t), (wp(2, 1, 3), dp);
+ring RingVar = (0, s, t), (x, y, z), wp(2, 1, 3);
+
+poly f = x2z + yz2 + y7 + sx3y + tx2y3;
+
+ideal F = diff(f, x), diff(f, y), diff(f, z);
+
+list Paras = s, t;
+list Vars = x, y, z;
+
+/////////////////////////////////////////////////
+list L = paraprimdec(F, Paras, Vars, RingVar, RingAll);
+L;
+if_vanish(L);
+
+exit;
