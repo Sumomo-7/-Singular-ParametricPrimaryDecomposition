@@ -4,7 +4,7 @@ LIB "polylib.lib";
 LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/primdecSYCI.lib";
 
 static proc list2string(list L){
-    //数学的な意味を持たない。
+    //Transform a list to a string, no mathematical meaning.
     int i;
     string s = "";
     for(i=1; i<=size(L); i++){
@@ -17,7 +17,7 @@ static proc list2string(list L){
 }
 
 static proc makering1dp(string ringName, list XUX, list AUA, list U){
-    //makering関数は全員数学的に大した意味を持たない。ただSingularでの環創成がlistに弱いのでその迂回策
+    //The ring declaration in SINGULAR is not very compatible with list but string.
     //ring ringName = 0, (XUX, AUA, U), (dp, dp, dp);
     string sX = list2string(XUX);
     string sA = list2string(AUA);

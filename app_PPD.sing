@@ -4,6 +4,10 @@ LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/NABESHIMAcgs.lib";
 option(redSB);
 option(noredefine);
 
+//////////////////////////////////////////////////
+//*Application 1: Geometry Configuration Problem//
+//////////////////////////////////////////////////
+
 // ring RingVar = (0, u1, u2, u3), (x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12), dp;
 // ring RingAll = 0, (x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, u1, u2, u3), (dp(12), dp);
 
@@ -13,16 +17,15 @@ option(noredefine);
 // list Vars = x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12;
 // list Indet = x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, u1, u2, u3;
 
-ring RingAll = 0, (x1, x2, x3, x4, x5, x6, u1, u2, u3), (dp(6), dp);
-ring RingVar = (0, u1, u2, u3), (x1, x2, x3, x4, x5, x6), dp;
+// ring RingAll = 0, (x1, x2, x3, x4, x5, x6, u1, u2, u3), (dp(6), dp);
+// ring RingVar = (0, u1, u2, u3), (x1, x2, x3, x4, x5, x6), dp;
 
-ideal F = x2^2 - (u1 - x2)^2, x2^2 + x1^2 - u1^2, (x4 - u1)^2 + x3^2 - (x4 - u2)^2 - (x3-u3)^2, (x4 - u1) + x3^2 - (u1 - u2)^2 - u3^2, x6^2 + x5^2 - (x6 - u2)^2 - (x5 - u3)^2, x6^2 + x5^2 - u2^2 + u3^3;
+// ideal F = x2^2 - (u1 - x2)^2, x2^2 + x1^2 - u1^2, (x4 - u1)^2 + x3^2 - (x4 - u2)^2 - (x3-u3)^2, (x4 - u1) + x3^2 - (u1 - u2)^2 - u3^2, x6^2 + x5^2 - (x6 - u2)^2 - (x5 - u3)^2, x6^2 + x5^2 - u2^2 + u3^3;
 
-list Paras = u1, u2, u3;
-list Vars = x1, x2, x3, x4, x5, x6;
-list Indet = x1, x2, x3, x4, x5, x6, u1, u2, u3;
+// list Paras = u1, u2, u3;
+// list Vars = x1, x2, x3, x4, x5, x6;
 
-paraprimdec(F, Paras, Vars, Indet, RingVar, RingAll);
+// poly Conclusion = ((u1+x2)/3 - (x4+u2+u1)/3)^2 + (x1/3 - (x3+u3)/3)^2 - ((u1+x2)/3 - (u2+x6)/3)^2 - (x1/3 - (u3+x5)/3)^2;
 
 //Conclusion O3O1 == O3O2
 // x12 = (u1+x2)/3
@@ -33,6 +36,93 @@ paraprimdec(F, Paras, Vars, Indet, RingVar, RingAll);
 // x10 = (u2+x6)/3
 // x9 = (u3+x5)/3
 
-poly Conclusion = ((u1+x2)/3 - (x4+u2+u1)/3)^2 + (x1/3 - (x3+u3)/3)^2 - ((u1+x2)/3 - (u2+x6)/3)^2 - (x1/3 - (u3+x5)/3)^2;
+// paraprimdec(F, Paras, Vars, RingVar, RingAll);
+
+
+
+/////////////////////////////////////////////////
+//                                             //
+// Application 2: Singularity Resolution Check //
+//                                             //
+/////////////////////////////////////////////////
+
+//U14, [Nakamura, 2005] may have a typo
+// ring RingAll = 0, (x, y, z, a), (dp(3), dp);
+// ring RingVar = (0, a), (x, y, z), dp;
+
+// poly f = x3 + xz2 + xy3 + axy3;
+
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
+
+// list Paras = a;
+// list Vars = x, y, z;
+
+//N16 [Stable]
+// ring RingAll = 0, (x, y, s, t), (dp(2), dp);
+// ring RingVar = (0, s, t), (x, y), dp;
+
+// poly f = x4y + sx3y2 + tx2y3 + xy4;
+
+// ideal F = diff(f, x), diff(f, y);
+
+// list Paras = s, t;
+// list Vars = x, y;
+
+//V15 [Vanish]
+// ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
+// ring RingVar = (0, s, t), (x, y, z), dp;
+
+// poly f = xz2 + syz2 + x4 + tx2y2 + y4;
+
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
+// F;
+
+// list Paras = s, t;
+// list Vars = x, y, z;
+
+//X21 [Stable]
+// ring RingAll = 0, (x, y, s, t), (dp(2), dp);
+// ring RingVar = (0, s, t), (x, y), dp;
+
+// poly f = x4 + sx3y2 + tx2y4 + y8;
+
+// ideal F = diff(f, x), diff(f, y);
+
+// list Paras = s, t;
+// list Vars = x, y;
+
+// S20
+// ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
+// ring RingVar = (0, s, t), (x, y, z), dp;
+
+// poly f = x2z + yz2 + y7 + sx3y + tx2y3;
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
+
+// list Paras = s, t;
+// list Vars = x, y, z;
+
+//Q26
+// ring RingAll = 0, (x, y, z, t), (dp(3), dp);
+// ring RingVar = (0, t), (x, y, z), dp;
+
+// poly f = x3 + yz2 + tx2y4 + y12;
+
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
+
+// list Paras = t;
+// list Vars = x, y, z;
+
+//V21
+// ring RingAll = 0, (x, y, z, t), (dp(3), dp);
+// ring RingVar = (0, t), (x, y, z), dp;
+
+// poly f = x2y + z4 + ty3z2 + y6;
+
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
+
+// list Paras = t;
+// list Vars = x, y, z;
+
+paraprimdec(F, Paras, Vars, RingVar, RingAll);
 
 exit;

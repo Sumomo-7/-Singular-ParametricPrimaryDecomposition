@@ -1,6 +1,5 @@
 LIB "numerAlg.lib";
-LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/PARAprimdec.lib";
-LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/NABESHIMAcgs.lib";
+LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/paraprimdec2.lib";
 
 option(redSB);
 option(noredefine);
@@ -31,8 +30,16 @@ proc if_vanish(list L){
         }
         return(1);
     }
+
     int i, j, k;
-    ideal M = maxideal(1);
+
+    setring(RingVar);
+
+    ideal M_var = maxideal(1);
+
+    setring(RingAll);
+
+    ideal M = imap(RingVar, M_var);
     for(i=1; i<=size(L); i++){
         list branch = L[i][1];
         int flag = 1;
@@ -54,8 +61,8 @@ proc if_vanish(list L){
 //Inner Modality 2
 
 //J16[Stable]
-// ring RingAll = 0, (x, y, s, t), (wp(3, 1), dp);
-// ring RingVar = (0, s, t), (x, y), wp(3, 1);
+// ring RingVar = (0, s, t), (x, y), dp;
+// ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
 // poly f = x3 + y9 + tx2y3;
 
@@ -65,8 +72,8 @@ proc if_vanish(list L){
 // list Vars = x, y;
 
 //W15[Stable]
-// ring RingAll = 0, (x, y, s, t), (wp(3, 2), dp);
-// ring RingVar = (0, s, t), (x, y), wp(3, 2);
+// ring RingVar = (0, s, t), (x, y), dp;
+// ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
 // poly f = x4 + y6 + tx2y3;
 
@@ -76,8 +83,8 @@ proc if_vanish(list L){
 // list Vars = x, y;
 
 //Z15[Stable]
-// ring RingAll = 0, (x, y, s, t), (wp(2, 1), dp);
-// ring RingVar = (0, s, t), (x, y), wp(2, 1);
+// ring RingVar = (0, s, t), (x, y), dp;
+// ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
 // poly f = x3y + y7 + tx2y3;
 
@@ -86,9 +93,9 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y;
 
-//Q14[Vanish][?]
-// ring RingAll = 0, (x, y, z, s, t), (wp(4, 2, 5), dp);
-// ring RingVar = (0, s, t), (x, y, z), wp(4, 2, 5);
+//Q14[Stable]
+// ring RingVar = (0, s, t), (x, y, z), dp;
+// ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
 // poly f = x3 + yz2 + tx2y2 + xy4;
 
@@ -97,9 +104,9 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y, z;
 
-//S14[Stable][?]
-// ring RingAll = 0, (x, y, z, s, t), (wp(1, 2, 4), dp);
-// ring RingVar = (0, s, t), (x, y, z), wp(1, 2, 4);
+//S14[Stable]
+// ring RingVar = (0, s, t), (x, y, z), dp;
+// ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
 // poly f = x2z + yz2 + y5 + ty3z;
 
@@ -109,8 +116,8 @@ proc if_vanish(list L){
 // list Vars = x, y, z;
 
 //U14[Stable]
-// ring RingAll = 0, (x, y, z, s, t), (wp(3, 2, 3), dp);
-// ring RingVar = (0, s, t), (x, y, z), wp(3, 2, 3);
+// ring RingVar = (0, s, t), (x, y, z), dp;
+// ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
 // poly f = x3 + xz2 + txy3 + zy3;
 
@@ -122,8 +129,8 @@ proc if_vanish(list L){
 //Inner Modality 3
 
 //J22[Stable]
-// ring RingAll = 0, (x, y, s, t), (wp(4, 1), dp);
-// ring RingVar = (0, s, t), (x, y), wp(4, 1);
+// ring RingVar = (0, s, t), (x, y), dp;
+// ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
 // poly f = x3 + tx2y4 + y12;
 
@@ -133,8 +140,8 @@ proc if_vanish(list L){
 // list Vars = x, y;
 
 //Z21[Stable]
-// ring RingAll = 0, (x, y, s, t), (wp(3, 1), dp);
-// ring RingVar = (0, s, t), (x, y), wp(3, 1);
+// ring RingVar = (0, s, t), (x, y), dp;
+// ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
 // poly f = x3y + tx2y4 + y10;
 
@@ -143,9 +150,9 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y;
 
-//W20[Vanish][?]
-// ring RingAll = 0, (x, y, z, s, t), (wp(3, 1, 4), dp);
-// ring RingVar = (0, s, t), (x, y, z), wp(3, 1, 4);
+//W20[Stable]
+// ring RingVar = (0, s, t), (x, y, z), dp;
+// ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
 // poly f = x3 + yz2 + tx2y3 + y9;
 
@@ -155,8 +162,8 @@ proc if_vanish(list L){
 // list Vars = x, y, z;
 
 //N16[Stable]
-// ring RingAll = 0, (x, y, s, t), (wp(1, 1), dp);
-// ring RingVar = (0, s, t), (x, y), wp(1, 1);
+// ring RingVar = (0, s, t), (x, y), dp;
+// ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
 // poly f = x4y + sx3y2 + tx2y3 + xy4;
 
@@ -166,8 +173,8 @@ proc if_vanish(list L){
 // list Vars = x, y;
 
 //V15 [Vanish]
-// ring RingAll = 0, (x, y, z, s, t), (wp(2, 2, 3), dp);
-// ring RingVar = (0, s, t), (x, y, z), wp(2, 2, 3);
+// ring RingVar = (0, s, t), (x, y, z), dp;
+// ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
 // poly f = xz2 + syz2 + x4 + tx2y2 + y4;
 
@@ -179,8 +186,8 @@ proc if_vanish(list L){
 //Inner Modality 4
 
 //J28[Stable]
-// ring RingAll = 0, (x, y, s, t), (wp(5, 1), dp);
-// ring RingVar = (0, s, t), (x, y), wp(5, 1);
+// ring RingVar = (0, s, t), (x, y), dp;
+// ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
 // poly f = x3 + tx2y5 + y15;
 
@@ -190,8 +197,8 @@ proc if_vanish(list L){
 // list Vars = x, y;
 
 //Z27[Stable]
-// ring RingAll = 0, (x, y, s, t), (wp(4, 1), dp);
-// ring RingVar = (0, s, t), (x, y), wp(4, 1);
+// ring RingVar = (0, s, t), (x, y), dp;
+// ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
 // poly f = x3y + tx2y5 + y13;
 
@@ -201,8 +208,8 @@ proc if_vanish(list L){
 // list Vars = x, y;
 
 //N22[Stable]
-// ring RingAll = 0, (x, y, s, t), (wp(3, 2), dp);
-// ring RingVar = (0, s, t), (x, y), wp(3, 2);
+// ring RingVar = (0, s, t), (x, y), dp;
+// ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
 // poly f = x4y + tx2y4 + y7;
 
@@ -211,9 +218,9 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y;
 
-//Q26[Stable][?]
-// ring RingAll = 0, (x, y, z, s, t), (wp(8, 2, 11), dp);
-// ring RingVar = (0, s, t), (x, y, z), wp(8, 2, 11);
+//Q26[Stable]
+// ring RingVar = (0, s, t), (x, y, z), dp;
+// ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
 // poly f = x3 + yz2 + tx2y4 + y12;
 
@@ -223,8 +230,8 @@ proc if_vanish(list L){
 // list Vars = x, y, z;
 
 //V21*[Stable]
-// ring RingAll = 0, (x, y, z, s, t), (wp(5, 2, 3), dp);
-// ring RingVar = (0, s, t), (x, y, z), wp(5, 2, 3);
+// ring RingVar = (0, s, t), (x, y, z), dp;
+// ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
 // poly f = x2y + z4 + ty3z2 + y6;
 
@@ -234,8 +241,8 @@ proc if_vanish(list L){
 // list Vars = x, y, z;
 
 //V18'[Stable]
-// ring RingAll = 0, (x, y, z, s, t), (wp(4, 3, 3), dp);
-// ring RingVar = (0, s, t), (x, y, z), wp(4, 3, 3);
+// ring RingVar = (0, s, t), (x, y, z), dp;
+// ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
 // poly f = x3 + y4 + ty2z2 + z4;
 
@@ -245,8 +252,8 @@ proc if_vanish(list L){
 // list Vars = x, y, z;
 
 //X21[Stable]
-// ring RingAll = 0, (x, y, s, t), (wp(2, 1), dp);
-// ring RingVar = (0, s, t), (x, y), wp(2, 1);
+// ring RingVar = (0, s, t), (x, y), dp;
+// ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
 // poly f = x4 + sx3y2 + tx2y4 + y8;
 
@@ -256,18 +263,19 @@ proc if_vanish(list L){
 // list Vars = x, y;
 
 //S20*[Stable]
-ring RingAll = 0, (x, y, z, s, t), (wp(2, 1, 3), dp);
-ring RingVar = (0, s, t), (x, y, z), wp(2, 1, 3);
+// ring RingVar = (0, s, t), (x, y, z), dp;
+// ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
-poly f = x2z + yz2 + y7 + sx3y + tx2y3;
+// poly f = x2z + yz2 + y7 + sx3y + tx2y3;
 
-ideal F = diff(f, x), diff(f, y), diff(f, z);
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
 
-list Paras = s, t;
-list Vars = x, y, z;
+// list Paras = s, t;
+// list Vars = x, y, z;
 
 /////////////////////////////////////////////////
-list L = paraprimdec(F, Paras, Vars, RingVar, RingAll);
+
+list L = paraprimdec(F, Paras, Vars, RingVar, RingAll, "generic");
 L;
 if_vanish(L);
 
