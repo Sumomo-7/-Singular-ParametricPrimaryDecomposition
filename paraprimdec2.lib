@@ -23,26 +23,24 @@ proc paraprimdec(ideal F, list Paras, list Vars, def RingVar, def RingAll, list 
     ideal E = poly(0);
     list N = poly(1);
 
-    string sizeofring = charstr(RingAll);
+    int sizeofring = ringlist(RingAll)[1];
 
     if(size(#)){
         string Cmethod = string(#[1]);
         if(Cmethod == "generic"){
-            if(sizeofring == "QQ" || sizeofring[1] == "0"){
+            if(sizeofring == 0){
                 list Z = generic_ppd_main(E, N, F);
             }else{
-                int q = int(sizeofring[1]);
-                list Z = generic_ffppd_main(q, E, N, F);
+                list Z = generic_ffppd_main(sizeofring, E, N, F);
             }
         }else{
             ERROR("UNKNOWN COMPUTATION METHOD.");
         }
     }else{
-        if(sizeofring == "QQ" || sizeofring[1] == "0"){
+        if(sizeofring == 0){
             list Z = ppd_main(E, N, F);
         }else{
-            int q = int(sizeofring[1]);
-            list Z = ff_ppd_main(q, E, N, F);
+            list Z = ff_ppd_main(sizeofring, E, N, F);
         }
     }
     return(Z);
@@ -173,23 +171,33 @@ proc ff_ppd_main(int q, ideal E, list N, ideal G){
 
     //main branches
     list PD = primdecSY(Gm);
+    print("PD");
+    PD;
 
     list added_N;
+    list Irr_N;
     for(i = 1; i<= size(PD); i++){
         ideal Q = PD[i][1];
         ideal P = PD[i][2];
 
-        ideal Qr, Qm;
-        Qr, Qm = separate_ParaVar(Q);
+        ideal Qr = separate_ParaVar(Q, 1);
         new_E = groebner(new_E + Qr);
 
-        added_N = added_N + SqfFactors_LC_list(P);
+        added_N = added_N + SqfFactors_LC_list(separate_ParaVar(P, 2));
+        print("SqfFactors_LC_list(P)");
+        SqfFactors_LC_list(separate_ParaVar(P, 2));;
         list H = effectiveHIT(Q, P, q);
+        print("eHIT");
+        H;
 
         added_N = added_N + H[1];
         if(size(H[2])){
             poly Of = H[2];
-            added_N = added_N + ff_Irr_Check(q, Of);
+            print("the min Poly");
+            Of;
+            Irr_N = Irr_N + ff_IrrCheck(q, Of);
+            print("IrrCheck");
+            ff_IrrCheck(q, Of);
         } 
     }
 
@@ -197,17 +205,20 @@ proc ff_ppd_main(int q, ideal E, list N, ideal G){
     added_N = Simplify_DisEqu(added_N, new_E);
     list out_N = Simplify_DisEqu(new_N + added_N, new_E);
     new_E = Simplify_Equ(new_E, out_N);
-    if(!size(out_N)){
-        out_N = poly(1);
-    }
+    print("new_E");
+    new_E;
+    print("out_N");
+    out_N;
     if(ff_Check_Consistence(q, new_E, out_N)){
+        out_N = out_N + Irr_N;
         Z[size(Z)+1] = list(PD, new_E, out_N);
     }
 
     //recursive calling
     list tempN;
+    added_N = added_N + Irr_N;
     for(i=1; i<=size(added_N); i++){
-        list CGS = ff_idealcgs_main(new_E + added_N[i], new_N + tempN, G);
+        list CGS = ff_idealcgs_main(q, new_E + added_N[i], new_N + tempN, G);
         tempN[size(tempN)+1] = added_N[i];
 
         if(size(CGS)){
@@ -216,7 +227,7 @@ proc ff_ppd_main(int q, ideal E, list N, ideal G){
                 list cgsN;
                 cgsE, cgsN, cgsG = CGS[j][1],  CGS[j][2], CGS[j][3];
                 
-                Z = Z + ff_ppd_main(cgsE, cgsN, cgsG);
+                Z = Z + ff_ppd_main(q, cgsE, cgsN, cgsG);
             }
         }
     }
@@ -499,7 +510,7 @@ proc Check_Consistence(ideal Equ, list DisEqu){
     }
 }
 
-static proc separate_ParaVar(ideal G){
+static proc separate_ParaVar(ideal G, list #){
     setring(RingVar);
     ideal Gr_var, Gm_var;
     ideal G_var = imap(RingAll, G);
@@ -529,6 +540,15 @@ static proc separate_ParaVar(ideal G){
     }
     if(Gm_size){
         Gm = imap(RingVar, Gm_var);
+    }
+
+    if(size(#)){
+        if(#[1] == 1){
+            return(Gr);
+        }
+        if(#[1] == 2){
+            return(Gm);
+        }
     }
     return(Gr, Gm);
 }
@@ -573,13 +593,22 @@ static proc effectiveHIT(ideal Q, ideal P, list #){
     export(RingExt);
 
     ideal P_ext = imap(RingAll, P);
-    ideal G = groebner(P_ext);
+    ideal G_ext = groebner(P_ext);
+    setring(RingAll);
+    ideal Gr, Gm;
+    Gm = separate_ParaVar(imap(RingExt, G_ext), 2);
+    setring(RingExt);
+
+    ideal G = imap(RingAll, Gm);
+    poly minPoly_ext;
+    list L3_ext;
 
     if(q == 0){
-        P_ext, minPoly_ext = Shape_Form(G, imap(RingAll, U), imap(RingAll, XmUx));
+        P_ext, minPoly_ext, L3_ext = Shape_Form(G, imap(RingAll, U), imap(RingAll, XmUx));
     }else{
-        P_ext, minPoly_ext = Shape_Form(G, imap(RingAll, U), imap(RingAll, XmUx), q);
+        P_ext, minPoly_ext, L3_ext = Shape_Form(G, imap(RingAll, U), imap(RingAll, XmUx), q);
     }
+    int sL3 = size(L3_ext);
     
     //Computation of Stable Condition w.r.t. Extension & Contraction
     setring(RingAll);
@@ -607,11 +636,16 @@ static proc effectiveHIT(ideal Q, ideal P, list #){
     poly minPoly = imap(RingExt, minPoly_ext);
     list L1 = SqfFactors_LC_list(imap(RingExt, P_ext));
     list L2 = SqfFactors_LC_list(lcm(imap(RingSep, H_sep)));
+    if(sL3){
+        list L3 = imap(RIngExt, L3_ext);
+    }else{
+        list L3;
+    }
 
     if(deg(minPoly) > 0){
-        return(list(L1+L2, minPoly));
+        return(list(L1+L2+L3, minPoly));
     }else{
-        return(list(L1+L2, list()));
+        return(list(L1+L2+L3, list()));
     }
 }
 
@@ -682,11 +716,11 @@ static proc Shape_Form(ideal F, list U, list XmUx, list #){
     for(i = 1; i<=size(F); i++){
         poly tempf = reduce(F[i], XruU);
         if(deg(tempf) <= 0){
-            minPoly_ext = G[i];
+            minPoly_ext = F[i];
         }
     }
     if(minPoly_ext != 0){
-        return(F, minPoly_ext);
+        return(F, minPoly_ext, list());
     }
 
     //non-generic case
@@ -719,7 +753,7 @@ static proc Shape_Form(ideal F, list U, list XmUx, list #){
                 poly minPoly = substitute(G[i], Z, rollback);
 
                 setring(RingExt);
-                return(imap(RingShape, P), imap(RingShape, minPoly));
+                return(imap(RingShape, P), imap(RingShape, minPoly), list());
             }
         }
         counter++;
@@ -729,9 +763,15 @@ static proc Shape_Form(ideal F, list U, list XmUx, list #){
     if(size(#)){
         setring(RingExt);
         int q = #[1];
-        intvec EV = Exponent_Vector(q, F, U, XmUx);
+        list ev_N;
+        intvec EV, ev_N = Exponent_Vector(q, F, U, XmUx);
         ideal sc_F = Separable_Closure(q, EV, XmUx, F);
-        return(Shape_Form(sc_F, U, XmUx));
+
+        ideal reP;
+        poly reminPoly;
+        list reL;
+        reP, reminPoly, reL = Shape_Form(sc_F, U, XmUx, q);
+        return(reP, reminPoly, ev_N);
     }else{
         ERROR("FAILED TO SHAPE THE IDEAL. RERUN THE PROCEDURE.");
     }
@@ -950,7 +990,7 @@ static proc def_SeparateRing(string Name, list U, list X){
     return(cmd);
 }
 
-def_4BlockRing(string Name, list XmUx, list Dummy, list AmUa, list U, list #){
+static proc def_4BlockRing(string Name, list XmUx, list Dummy, list AmUa, list U, list #){
     // ring Name = char(RingAll), (XmUx, Dummy, AmUa, U), (ord(basering), ord(basering), ord(basering), ord(basering)).
     string sX = list2string(XmUx);
     string sD = list2string(Dummy);
@@ -1126,14 +1166,14 @@ static proc MDBasis(G){
     return(imap(RingVar, basis), imap(RingVar, LCoefs));
 }
 
-proc ff_idealcgs_main(ideal E, list N, ideal F){
+proc ff_idealcgs_main(int q, ideal E, list N, ideal F){
     int i;
     ideal new_E = groebner(E);
     new_E = Radical_Equ(new_E);
     list new_N = Simplify_DisEqu(N, new_E);
     new_E = Simplify_Equ(new_E, new_N);
 
-    if (!FF_Check_Consistence(q, new_E, new_N)){
+    if (!ff_Check_Consistence(q, new_E, new_N)){
         return(list());
     }
 
@@ -1158,7 +1198,7 @@ proc ff_idealcgs_main(ideal E, list N, ideal F){
             i++;
             continue;
         }
-        if (ff_Check_Consistence(new_E, new_N + list(tempP))){
+        if (ff_Check_Consistence(q, new_E, new_N + list(tempP))){
             Z = Z + list(list(new_E, new_N + list(tempP), ideal(1)));
         }
         new_E = groebner(new_E + tempP);
@@ -1171,7 +1211,7 @@ proc ff_idealcgs_main(ideal E, list N, ideal F){
         LCFactors[size(LCFactors)+1] = tempLCFactors[i];
     }
 
-    if(ff_Check_Consistence(new_E, new_N + LCFactors)){
+    if(ff_Check_Consistence(q, new_E, new_N + LCFactors)){
         Z[size(Z)+1] = list(new_E, new_N + LCFactors, Gm);
     }
 
@@ -1180,7 +1220,7 @@ proc ff_idealcgs_main(ideal E, list N, ideal F){
     for(i = 1; i <= size(LCFactors); i++){
         ideal next_E = new_E;
         next_E[size(next_E)+1] = LCFactors[i];
-        Z = Z + ff_idealcgs_main(next_E, new_N + tempN, G);
+        Z = Z + ff_idealcgs_main(q, next_E, new_N + tempN, G);
         tempN[size(tempN)+1] = LCFactors[i];
     }
     return(Z);
@@ -1201,12 +1241,59 @@ static proc ff_Check_Consistence(int q, ideal E, list N){
         E[size(E)+1] = tempU^q - tempU;
     }
 
-    E = groebner(E);
-
     for(i=1; i<=size(N); i++){
         if(reduce(N[i], E) != 0){
             return(1);
         }
     }
     return(0);
+}
+
+static proc ff_IrrCheck(int q, poly f){
+    int i, j;
+
+    ideal indepof_f = variables(f);
+
+    ideal varof_f;
+    for(i = 1; i<=size(Variables); i++){
+        for(j = 1; j<=size(indepof_f); j++){
+            if(Variables[i] == indepof_f[j]){
+                varof_f[size(varof_f)+1] = Variables[i];
+            }
+        }
+    }
+    if(size(varof_f) == 0){
+        ERROR("IRREDUCIBILITY CHECK IS UNNECESSARY FOR A POLYNOMIAL COSISTING NO VARIABLES.");
+    }
+    if(size(varof_f) == 1){
+        return(ff_Uni_IrrCheck(q, f));
+    }else{
+        poly phi_f = f;
+        for(i = 2; i<=size(varof_f); i++){
+            int beta = random(1, q);
+            phi_f = subst(phi_f, varof_f[i], beta);
+        }
+        return(ff_Uni_IrrCheck(q, phi_f));  
+    }
+}
+
+static proc ff_Uni_IrrCheck(int q, poly f){
+    int i;
+    setring(RingVar);
+    poly f_var = imap(RingAll, f);
+    int d = deg(leadmonom(f_var));
+
+    setring(RingAll);
+    ideal F = f;
+    poly minVar = variables(f)[1];
+    list N;
+    for(i=1; i<=d-1; i++){
+        ideal F = f, minVar^((q)^(i)) - minVar;
+        ideal G = groebner(F);
+        print("this is ff_Uni_IrrCheck");
+        G;
+        ideal Gr = separate_ParaVar(G, 1);
+        N = N + ideal2list(Gr);
+    }
+    return(N);
 }
