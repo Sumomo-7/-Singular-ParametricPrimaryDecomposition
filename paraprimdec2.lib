@@ -171,33 +171,24 @@ proc ff_ppd_main(int q, ideal E, list N, ideal G){
 
     //main branches
     list PD = primdecSY(Gm);
-    print("PD");
-    PD;
 
-    list added_N;
-    list Irr_N;
+    list added_N, Irr_N;
     for(i = 1; i<= size(PD); i++){
         ideal Q = PD[i][1];
         ideal P = PD[i][2];
 
-        ideal Qr = separate_ParaVar(Q, 1);
-        new_E = groebner(new_E + Qr);
+        ideal Pr = separate_ParaVar(Q, 1);
+        new_E;
+        new_E = groebner(new_E + Pr);
+        new_E;
 
         added_N = added_N + SqfFactors_LC_list(separate_ParaVar(P, 2));
-        print("SqfFactors_LC_list(P)");
-        SqfFactors_LC_list(separate_ParaVar(P, 2));;
         list H = effectiveHIT(Q, P, q);
-        print("eHIT");
-        H;
 
         added_N = added_N + H[1];
         if(size(H[2])){
             poly Of = H[2];
-            print("the min Poly");
-            Of;
             Irr_N = Irr_N + ff_IrrCheck(q, Of);
-            print("IrrCheck");
-            ff_IrrCheck(q, Of);
         } 
     }
 
@@ -205,10 +196,6 @@ proc ff_ppd_main(int q, ideal E, list N, ideal G){
     added_N = Simplify_DisEqu(added_N, new_E);
     list out_N = Simplify_DisEqu(new_N + added_N, new_E);
     new_E = Simplify_Equ(new_E, out_N);
-    print("new_E");
-    new_E;
-    print("out_N");
-    out_N;
     if(ff_Check_Consistence(q, new_E, out_N)){
         out_N = out_N + Irr_N;
         Z[size(Z)+1] = list(PD, new_E, out_N);
@@ -304,6 +291,82 @@ proc generic_ppd_main(E, N, F){
                 cgsE, cgsN, cgsG = CGS[j][1],  CGS[j][2], CGS[j][3];
                 
                 Z = Z + generic_ppd_main(cgsE, cgsN, cgsG);
+            }
+        }
+    }
+    return(Z);
+}
+
+proc generic_ffppd_main(int q, ideal E, list N, ideal F){
+    int i, j;
+    list Z;
+    ideal new_E = groebner(E);
+    new_E = Radical_Equ(new_E);
+    list new_N = Simplify_DisEqu(N, new_E);
+    new_E = Simplify_Equ(new_E, new_N);
+
+    if (!ff_Check_Consistence(q, new_E, new_N)){
+        return(list());
+    }
+
+    setring(RingVar);
+
+    ideal G_var = groebner(imap(RingAll, F));
+    list PD_var = primdecSY(G_var);
+
+    setring(RingAll);
+
+    list added_N, Irr_N;
+    ideal G = imap(RingVar, G_var);
+    
+    //trivial branches
+    if(deg(G[1]) <= 0){
+        Z[size(Z)+1] = list(list(G, G), new_E, new_N, list());
+    }
+
+    //main branches
+    ideal S = quotient(F, G);
+    added_N = added_N + list(SqfFactors_LC_list(S)[1]);
+    list PD = imap(RingVar, PD_var);
+
+    for(i = 1; i<= size(PD); i++){
+        ideal Q = PD[i][1];
+        ideal P = PD[i][2];
+
+        added_N = added_N + SqfFactors_LC_list(P);
+        list H = effectiveHIT(Q, P, q);
+
+        added_N = added_N + H[1];
+        if(size(H[2])){
+            poly Of = H[2];
+            Irr_N = Irr_N + ff_IrrCheck(q, Of);
+        }
+    }
+
+    new_E = Radical_Equ(new_E);
+    added_N = Simplify_DisEqu(added_N, new_E);
+    list out_N = Simplify_DisEqu(new_N + added_N, new_E);
+    new_E = Simplify_Equ(new_E, out_N);
+    if(ff_Check_Consistence(q, new_E, out_N)){
+        out_N = out_N + Irr_N;
+        Z[size(Z)+1] = list(PD, new_E, out_N);
+    }
+
+    //recursive calling
+    list tempN;
+    added_N = Simplify_DisEqu(added_N + Irr_N, new_E);
+    new_E = Simplify_Equ(new_E, out_N);
+    for(i=1; i<=size(added_N); i++){
+        list CGS = ff_idealcgs_main(q, new_E + added_N[i], new_N + tempN, G);
+        tempN[size(tempN)+1] = added_N[i];
+
+        if(size(CGS)){
+            for(j=1; j<=size(CGS); j++){
+                ideal cgsG, cgsE;
+                list cgsN;
+                cgsE, cgsN, cgsG = CGS[j][1],  CGS[j][2], CGS[j][3];
+                
+                Z = Z + generic_ffppd_main(q, cgsE, cgsN, cgsG);
             }
         }
     }
@@ -701,22 +764,28 @@ static proc generic_MIS(ideal P){
 }
 
 static proc Shape_Form(ideal F, list U, list XmUx, list #){
-    int i;
-
-    poly Xr = XmUx[size(XmUx)];
-    ideal XruU = Xr;
+    int i, j;
+    print("this is Shape_Form");
     if(size(U)){
-        for(i = 1; i<=size(U); i++){
-            XruU[size(XruU)+1] = U[i];
-        }
+        ideal Uideal = list2ideal(U);
+    }else{
+        ideal Uideal;
     }
 
     //generic case
     poly minPoly_ext = 0;
+    ideal XX = list2ideal(imap(RingAll, Variables));
+    int flag = 1;
     for(i = 1; i<=size(F); i++){
-        poly tempf = reduce(F[i], XruU);
-        if(deg(tempf) <= 0){
-            minPoly_ext = F[i];
+        for(j = size(XmUx); i>=1; j=j-1){
+            ideal XruU = XmUx[j] + Uideal;
+            if(deg(reduce(F[i], XruU)) <= 0){
+                minPoly_ext = F[i];
+                break;
+            }
+        }
+        if(deg(reduce(minPoly_ext, XX)) > 0){
+            return(F, minPoly_ext, list());
         }
     }
     if(minPoly_ext != 0){
@@ -1290,8 +1359,6 @@ static proc ff_Uni_IrrCheck(int q, poly f){
     for(i=1; i<=d-1; i++){
         ideal F = f, minVar^((q)^(i)) - minVar;
         ideal G = groebner(F);
-        print("this is ff_Uni_IrrCheck");
-        G;
         ideal Gr = separate_ParaVar(G, 1);
         N = N + ideal2list(Gr);
     }

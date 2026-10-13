@@ -1,14 +1,15 @@
-LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/PARAprimdec2.lib";
+LIB "/Users/ilumualf/Desktop/M2OS/codes/SingularCGS/paraprimdec2.lib";
 option(redSB);
 option(noredefine);
 ////Parametric Primary Decomposition////
 
 //Example 1, taken from [Y.Ishihara, K.Yokoyama - Comprehensive Systems for Primary Decompositions of Parametric Ideals, 2024]
-ring RingVar = (0, a, b), (x, y), dp;
-ring RingAll = 0, (x, y, a, b), (dp(2), dp);
+ring RingVar = (7, a, b), (x, y), dp;
+ring RingAll = 7, (x, y, a, b), (dp(2), dp);
 ideal F = x2 - a, bxy;
 list Paras = a, b;
 list Vars = x, y;
+paraprimdec(F, Paras, Vars, RingVar, RingAll, "generic");
 
 //Example 2, taken from [Y.Ishihara, K.Yokoyama, 2024]
 // ring RingVar = (0, a, b), (x, y, z), dp;
@@ -84,8 +85,6 @@ list Vars = x, y;
 // list Paras = x1, x2;
 // list Vars = z1, z2;
 // list Indet = z1, z2, x1, x2;
-
-paraprimdec(F, Paras, Vars, RingVar, RingAll, "generic");
 
 // ring RingVar = (3, a, b), (x, y, z), lp;
 // ring RingAll = 3, (x, y, z, a, b), (lp(3), lp);

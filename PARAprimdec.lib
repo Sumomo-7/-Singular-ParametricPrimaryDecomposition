@@ -1215,11 +1215,7 @@ static proc FF_Check_Consistence(int q, ideal E, list N){
     return(0);
 }
 
-static proc FF_multivarfactor(int q, poly varf, list varU){
-    int i, j;
-    setring(RingAll);
-
-    list U = imap(RingVar, varU);
+static proc FF_multivarfactor(int q, poly f, list varU){
     ideal beta;
     ideal F = imap(RingVar, varf);
 
