@@ -11,6 +11,40 @@ option(noredefine);
 // list Vars = x, y;
 // paraprimdec(F, Paras, Vars, RingVar, RingAll, "generic");
 
+//example 4.3&4.5
+// ring RingVar = (0, a, b), (x, y, z), dp;
+// ring RingAll = 0, (x, y, z, a, b), (dp(3), dp);
+// ideal F = x2y2 - 2x2 - ay2 + 2a, bxy, axz3 - a2z3;
+// list Paras = a, b;
+// list Vars = x, y, z;
+// paraprimdec(F, Paras, Vars, RingVar, RingAll, "generic");
+
+//example 4.7
+ring RingVar = (0, a, b), (x, y, z), dp;
+ring RingAll = 0, (x, y, z, a, b), (dp(3), dp);
+ideal F = x2y2 - 2x2 - ay2 + 2a, bxyz3 - abyz3;
+list Paras = a, b;
+list Vars = x, y, z;
+list L = paraprimdec(F, Paras, Vars, RingVar, RingAll, "generic");
+L;
+
+//20261110
+// ring RingVar = (5, a, b), (x, y, z), dp;
+// ring RingAll = 5, (x, y, z, a, b), (dp(3), dp);
+// ideal F = x2 - a, by3;
+// F;
+// list Paras = a, b;
+// list Vars = x, y, z;
+// paraprimdec(F, Paras, Vars, RingVar, RingAll, "generic");
+
+// ring RingVar = (5, a, b), (x, y), dp;
+// ring RingAll = 5, (x, y, a, b), (dp(2), dp);
+// ideal F = (x2 + a)*(x + 1);
+// list Paras = a, b;
+// list Vars = x, y;
+// paraprimdec(F, Paras, Vars, RingVar, RingAll, "generic");
+
+
 //Example 2, taken from [Y.Ishihara, K.Yokoyama, 2024]
 // ring RingVar = (0, a, b), (x, y, z), dp;
 // ring RingAll = 0, (x, y, z, a, b), (dp(3), dp);
@@ -27,8 +61,8 @@ option(noredefine);
 // list Indet = x, a, b;
 
 //Example 4, given by Prof.Nabeshima
-// ring RingVar = (0, a, b), (x, y), dp;
-// ring RingAll = 0, (x, y, a, b), (dp(2), dp);
+// ring RingVar = (5, a, b), (x, y), dp;
+// ring RingAll = 5, (x, y, a, b), (dp(2), dp);
 // ideal F = x4 + y4 - ax2, ax2y + y3 + bx2;
 // list Paras = a, b;
 // list Vars = x, y;
@@ -105,11 +139,19 @@ option(noredefine);
 // list Vars = x;
 // idealcgs(E, N, F, Paras, Vars, RingVar, RingAll, 3);
 
-ring RingVar = (3, a, b), (x, y, z), dp;
-ring RingAll = 3, (x, y, z, a, b), (dp(3), dp);
-ideal F = x3 - a, y3 - b;
-list Paras = a, b;
-list Vars = x, y, z;
-paraprimdec(F, Paras, Vars, RingVar, RingAll, "generic");
+// ring RingVar = (3, a, b), (x, y), dp;
+// ring RingAll = 3, (x, y, a, b), (dp(2), dp);
+// ideal F = x3 - a, y3 - b;
+// list Paras = a, b;
+// list Vars = x, y;
+// paraprimdec(F, Paras, Vars, RingVar, RingAll, "generic");
+
+// ring RingVar = (5, a, b, c), (x, y), dp;
+// ring RingAll = 5, (x, y, a, b, c), (dp(3), dp);
+// ideal F = ax-b, by-a, cx2 - y, cy2 - x;
+// list Paras = a, b, c;
+// list Vars = x, y;
+// idealcgs(F, Paras, Vars, RingVar, RingAll);
+
 
 exit;

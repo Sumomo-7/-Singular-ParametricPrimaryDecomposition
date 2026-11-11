@@ -11,8 +11,7 @@ option(noredefine);
 /////////////////////////////////////////////////
 // We use the proposed parametric primary decomposition algorithm to determine the exceptional parameter values that cause the isolated singularity at the origin to vanish for a semi-weighted homogeneous hypersurface. A list of semi-weighted homogeneous polynomials(the defining polynomials of hypersurfaces) can be found in https://doi.org/10.1007/BF01390090, we compute the primary decomposition of part of them to demonstrate a possible application of our algorithm. 
 
-proc if_vanish(list L){
-    proc equal_ideal(ideal I, ideal J){
+proc equal_ideal(ideal I, ideal J){
         int i, j;
         if(size(I) != size(J)){
             return(0);
@@ -28,15 +27,14 @@ proc if_vanish(list L){
                 return(0);
             }
         }
-        return(1);
-    }
+    return(1);
+}
 
+proc if_vanish(list L){
     int i, j, k;
 
     setring(RingVar);
-
     ideal M_var = maxideal(1);
-
     setring(RingAll);
 
     ideal M = imap(RingVar, M_var);
@@ -58,9 +56,51 @@ proc if_vanish(list L){
     print("END OF PROCEDURE if_vanish");
 }
 
+proc MultSingularity(list L){
+    setring(RingVar);
+    ideal M_var = maxideal(1);
+    setring(RingAll);
+
+    int i, j;
+    for(i=1; i<=size(L); i++){
+        print("BRANCH NO.");
+        print(i);
+        int flag = 1;
+        list QPList = L[i][1];
+        for(j=1; j<=size(QPList); j++){
+            print("PRIMARY COMPONENT");
+            ideal Q = QPList[j][1];
+            Q;
+            print("AND ITS ASSOCIATED PRIME");
+            ideal P = QPList[j][2];
+            P;
+            ideal M = imap(RingVar, M_var);
+
+            if(equal_ideal(P, M)){
+                flag = 0;
+                print("E");
+                L[i][2];
+                print("N");
+                L[i][3];
+                
+                print("MULTIPLICITY OF SINGULARITY AT THE ORIGIN");
+                ideal Q_p = groebner(para_leadmon(Q));
+
+                setring(RingVar);
+                ideal Q_var = groebner(imap(RingAll, Q));
+                print(vdim(Q_var));
+                setring(RingAll);
+            }
+        }
+        if(flag){
+            print("THE SINGULARITY SEEMS TO VANISH AT BRANCH NO.");
+            print(i);
+        }
+    }
+}
 //Inner Modality 2
 
-//J16[Stable]
+//J16[Stable], mult = 16
 // ring RingVar = (0, s, t), (x, y), dp;
 // ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
@@ -71,7 +111,7 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y;
 
-//W15[Stable]
+//W15[Stable] mult = $15$ if $(t \neq \pm 2)$, $5$ if $t = \pm 2$
 // ring RingVar = (0, s, t), (x, y), dp;
 // ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
@@ -82,7 +122,7 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y;
 
-//Z15[Stable]
+//Z15[Stable] mult
 // ring RingVar = (0, s, t), (x, y), dp;
 // ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
@@ -93,7 +133,7 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y;
 
-//Q14[Stable]
+//Q14[Stable] mult
 // ring RingVar = (0, s, t), (x, y, z), dp;
 // ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
@@ -104,7 +144,7 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y, z;
 
-//S14[Stable]
+//S14[Stable] mult
 // ring RingVar = (0, s, t), (x, y, z), dp;
 // ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
@@ -115,7 +155,7 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y, z;
 
-//U14[Stable]
+//U14[Stable] mult
 // ring RingVar = (0, s, t), (x, y, z), dp;
 // ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
@@ -128,7 +168,7 @@ proc if_vanish(list L){
 
 //Inner Modality 3
 
-//J22[Stable]
+//J22[Stable] mult = 22
 // ring RingVar = (0, s, t), (x, y), dp;
 // ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
@@ -139,7 +179,7 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y;
 
-//Z21[Stable]
+//Z21[Stable] mult
 // ring RingVar = (0, s, t), (x, y), dp;
 // ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
@@ -150,7 +190,7 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y;
 
-//W20[Stable]
+//W20[Stable] mult
 // ring RingVar = (0, s, t), (x, y, z), dp;
 // ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
@@ -161,7 +201,7 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y, z;
 
-//N16[Stable]
+//N16[Stable] mult??? TOO LONG
 // ring RingVar = (0, s, t), (x, y), dp;
 // ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
@@ -172,20 +212,20 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y;
 
-//V15 [Vanish]
-// ring RingVar = (0, s, t), (x, y, z), dp;
-// ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
+// V15 [Stable] mult
+// ring RingVar = (0, a, b), (x, y, z), dp;
+// ring RingAll = 0, (x, y, z, a, b), (dp(3), dp);
 
-// poly f = xz2 + syz2 + x4 + tx2y2 + y4;
+// poly f = xz2 + x4 + y4 + ayz2 + bx2y2 ;
 
 // ideal F = diff(f, x), diff(f, y), diff(f, z);
 
-// list Paras = s, t;
+// list Paras = a, b;
 // list Vars = x, y, z;
 
 //Inner Modality 4
 
-//J28[Stable]
+//J28[Stable] mult = 28
 // ring RingVar = (0, s, t), (x, y), dp;
 // ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
@@ -196,7 +236,7 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y;
 
-//Z27[Stable]
+//Z27[Stable] mult
 // ring RingVar = (0, s, t), (x, y), dp;
 // ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
@@ -207,7 +247,7 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y;
 
-//N22[Stable]
+//N22[Stable] mult
 // ring RingVar = (0, s, t), (x, y), dp;
 // ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
@@ -218,7 +258,7 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y;
 
-//Q26[Stable]
+//Q26[Stable] mult
 // ring RingVar = (0, s, t), (x, y, z), dp;
 // ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
@@ -229,7 +269,7 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y, z;
 
-//V21*[Stable]
+//V21*[Stable] mult
 // ring RingVar = (0, s, t), (x, y, z), dp;
 // ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
@@ -240,7 +280,7 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y, z;
 
-//V18'[Stable]
+//V18'[Stable] mult
 // ring RingVar = (0, s, t), (x, y, z), dp;
 // ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
@@ -251,7 +291,7 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y, z;
 
-//X21[Stable]
+//X21[Stable] mult??? TOO LONG
 // ring RingVar = (0, s, t), (x, y), dp;
 // ring RingAll = 0, (x, y, s, t), (dp(2), dp);
 
@@ -262,7 +302,7 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y;
 
-//S20*[Stable]
+//S20*[Stable] mult??? TOO LONG
 // ring RingVar = (0, s, t), (x, y, z), dp;
 // ring RingAll = 0, (x, y, z, s, t), (dp(3), dp);
 
@@ -273,10 +313,54 @@ proc if_vanish(list L){
 // list Paras = s, t;
 // list Vars = x, y, z;
 
+//W17
+ring RingVar = (0, a, b), (x, y), dp;
+ring RingAll = 0, (x, y, a, b), (dp(2), dp);
+
+poly f = x4 + xy5 + ay7 + by8;
+
+ideal F = diff(f, x), diff(f, y);
+
+list Paras = a, b;
+list Vars = x, y;
+
+//Q18
+// ring RingVar = (0, a, b), (x, y, z), dp;
+// ring RingAll = 0, (x, y, z, a, b), (dp(3), dp);
+
+// poly f = x3 + yz2 + y8 + axy6 + bxz2;
+
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
+
+// list Paras = a, b;
+// list Vars = x, y, z;
+
+//Q22
+// ring RingVar = (0, a, b, c), (x, y, z), dp;
+// ring RingAll = 0, (x, y, z, a, b, c), (dp(3), dp);
+
+// poly f = x3 + yz2 + y^(10) + axy7 + bxy8 + cxz2;
+
+// ideal F = diff(f, x), diff(f, y), diff(f, z);
+
+// list Paras = a, b, c;
+// list Vars = x, y, z;
+
+
+
+
 /////////////////////////////////////////////////
 
-list L = paraprimdec(F, Paras, Vars, RingVar, RingAll, "generic");
-L;
-if_vanish(L);
+// list L1 = paraprimdec(F, Paras, Vars, RingVar, RingAll, "generic");
+// L1;
+// if_vanish(L1);
+// MultSingularity(L1);
+
+ideal T = F, f;
+T;
+list L2 = paraprimdec(T, Paras, Vars, RingVar, RingAll, "generic");
+L2;
+if_vanish(L2);
+MultSingularity(L2);
 
 exit;

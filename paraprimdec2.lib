@@ -46,6 +46,49 @@ proc paraprimdec(ideal F, list Paras, list Vars, def RingVar, def RingAll, list 
     return(Z);
 }
 
+proc idealcgs(ideal F, list Paras, list Vars, def RingVar, def RingAll, list #){
+    //We supposed the ideal F is defined in RingAll.
+    //#[1] assigns the computation method of the algorithm.
+    // Input NOTHING for the ordinary algorithm, where parameters will be considered as variables during the computation for a better performance.
+    // Input "generic" for the algorithm utilizing generic Groebner bases, offering a smaller number of primary components. 
+    option(redSB);
+    option(noredefine);
+
+    list Parameters = Paras;
+    list Variables = Vars;
+    list Indeterminates = Vars + Paras;
+    poly VMinDPoly = Vars[size(Vars)];
+    list Checks = 0, 0, 0, 0, 0, 0;
+
+    export(Parameters, Variables, Indeterminates, VMinDPoly, Checks);
+    export(RingVar, RingAll);
+
+    ideal E = poly(0);
+    list N = poly(1);
+
+    int sizeofring = ringlist(RingAll)[1];
+
+    if(size(#)){
+        string Cmethod = string(#[1]);
+        if(Cmethod == "generic"){
+            if(sizeofring == 0){
+                list Z = generic_idealcgs_main(E, N, F);
+            }else{
+                list Z = generic_idealcgs_main(sizeofring, E, N, F);
+            }
+        }else{
+            ERROR("UNKNOWN COMPUTATION METHOD.");
+        }
+    }else{
+        if(sizeofring == 0){
+            list Z = idealcgs_main(E, N, F);
+        }else{
+            list Z = ff_idealcgs_main(sizeofring, E, N, F);
+        }
+    }
+    return(Z);
+}
+
 proc ppd_main(ideal E, list N, ideal G){
     int i, j;
     list Z;
@@ -234,15 +277,23 @@ proc generic_ppd_main(E, N, F){
         return(list());
     }
 
-    setring(RingVar);
-
-    ideal G_var = groebner(imap(RingAll, F));
-    list PD_var = primdecSY(G_var);
+    if(new_E[1] == poly(0)){
+        setring(RingVar);
+        ideal G_var = groebner(imap(RingAll, F));
+        list PD_var = primdecSY(G_var);
+    }else{
+        setring(RingVar);
+        list PD_var;
+        ideal G_var;
+        G_var, PD_var = constrained_genericGB(imap(RingAll, new_E), imap(RingAll, F));
+    }
 
     setring(RingAll);
 
     list added_N;
     ideal G = imap(RingVar, G_var);
+    print("new_E");
+    new_E;
     print("generic GB");
     G;
     
@@ -253,15 +304,21 @@ proc generic_ppd_main(E, N, F){
     }
 
     //main branches
-    ideal Sr = separate_ParaVar(quotient(F, G), 1);
+    print("S");
+    quotient(F+new_E, G);
+    ideal Sr = separate_ParaVar(quotient(F + new_E, G), 1);
+    print("Sr");
+    Sr;
     if(size(Sr)){
         int r = random(1, size(Sr));
         added_N = added_N + list(Sr[r]);
     } 
     added_N = added_N + SqfFactors_LC_list(G);
+    print("genericGB_N");
+    added_N;
 
     list PD = imap(RingVar, PD_var);
-    print("PD");
+    print("PrimDec");
     PD;
 
     for(i = 1; i<= size(PD); i++){
@@ -277,7 +334,6 @@ proc generic_ppd_main(E, N, F){
         }
     }
 
-    new_E = Radical_Equ(new_E);
     added_N = Simplify_DisEqu(added_N, new_E);
     list out_N = Simplify_DisEqu(new_N + added_N, new_E);
     new_E = Simplify_Equ(new_E, out_N);
@@ -292,6 +348,8 @@ proc generic_ppd_main(E, N, F){
     list tempN;
     for(i=1; i<=size(added_N); i++){
         list CGS = idealcgs_main(new_E + added_N[i], new_N + tempN, F);
+        print("CGS");
+        CGS;
         tempN[size(tempN)+1] = added_N[i];
 
         if(size(CGS)){
@@ -300,11 +358,64 @@ proc generic_ppd_main(E, N, F){
                 list cgsN;
                 cgsE, cgsN, cgsG = CGS[j][1],  CGS[j][2], CGS[j][3];
                 
-                Z = Z + generic_ppd_main(cgsE, cgsN, cgsG);
+                Z = Z + generic_ppd_main(cgsE, cgsN, F);
             }
         }
     }
     return(Z);
+}
+
+static proc constrained_genericGB(ideal E_var, ideal F_var){
+    int i, j;
+    setring(RingAll);
+    ideal E = imap(RingVar, E_var);
+    ideal F = imap(RingVar, F_var);
+    intvec VarMIS = indepSet(E);
+    list Ua, AmUa;
+    for(i = size(Variables)+1; i<=size(VarMIS); i++){
+        if(VarMIS[i] == 1){
+            Ua[size(Ua)+1] = Indeterminates[i];
+        }else{
+            AmUa[size(AmUa)+1] = Indeterminates[i];
+        }
+    }
+
+    string cmd = def_Separate2BlockRing("RingVarV", Ua, Variables, AmUa);
+    execute(cmd);
+    ideal G_VV = groebner(imap(RingAll, F) + imap(RingAll, E));
+
+    setring(RingAll);
+    ideal G_all = imap(RingVarV, G_VV);
+    ideal G;
+    for(i=1; i<=size(G_all); i++){
+        if(reduce(G_all[i], E) != poly(0)){
+            G[size(G)+1] = G_all[i];
+        }
+    }
+    
+    setring(RingVarV);
+    list PD_VV = primdec(imap(RingAll, G));
+
+    setring(RingAll);
+    list PD_all = imap(RingVarV, PD_VV);
+    list PD;
+    for(i=1; i<=size(PD_all); i++){
+        ideal oldQ, oldP = PD_all[i][1], PD_all[i][2];
+        ideal Q, P;
+        for(j=1; j<=size(oldQ); j++){
+            if(reduce(oldQ[j], E) != poly(0)){
+                Q[size(Q)+1] = oldQ[j];
+            }
+        }
+        for(j=1; j<=size(oldP); j++){
+            if(reduce(oldP[j], E) != poly(0)){
+                P[size(P)+1] = oldP[j];
+            }
+        }
+        PD[i] = list(Q, P);
+    }
+    setring(RingVar);
+    return(imap(RingAll, G), imap(RingAll, PD));
 }
 
 proc generic_ffppd_main(int q, ideal E, list N, ideal F){
@@ -319,15 +430,25 @@ proc generic_ffppd_main(int q, ideal E, list N, ideal F){
         return(list());
     }
 
-    setring(RingVar);
-
-    ideal G_var = groebner(imap(RingAll, F));
-    list PD_var = primdecSY(G_var);
+    if(new_E[1] == poly(0)){
+        setring(RingVar);
+        ideal G_var = groebner(imap(RingAll, F));
+        list PD_var = primdecSY(G_var);
+    }else{
+        setring(RingVar);
+        list PD_var;
+        ideal G_var;
+        G_var, PD_var = constrained_genericGB(imap(RingAll, new_E), imap(RingAll, F));
+    }
+    print("primdec");
+    PD_var;
 
     setring(RingAll);
 
     list added_N, Irr_N;
     ideal G = imap(RingVar, G_var);
+    print("generic GB");
+    G;
     
     //trivial branches
     if(deg(G[1]) <= 0){
@@ -337,6 +458,8 @@ proc generic_ffppd_main(int q, ideal E, list N, ideal F){
 
     //main branches
     ideal Sr = separate_ParaVar(quotient(F, G), 1);
+    print("ideal quotient");
+    Sr;
     if(size(Sr)){
         int r = random(1, size(Sr));
         added_N = added_N + list(Sr[r]);
@@ -361,11 +484,10 @@ proc generic_ffppd_main(int q, ideal E, list N, ideal F){
     }
 
     new_E = Radical_Equ(new_E);
-    added_N = Simplify_DisEqu(added_N, new_E);
+    added_N = Simplify_DisEqu(added_N + Irr_N, new_E);
     list out_N = Simplify_DisEqu(new_N + added_N, new_E);
     new_E = Simplify_Equ(new_E, out_N);
     if(ff_Check_Consistence(q, new_E, out_N)){
-        out_N = out_N + Irr_N;
         Z[size(Z)+1] = list(PD, new_E, out_N);
     }
 
@@ -374,8 +496,10 @@ proc generic_ffppd_main(int q, ideal E, list N, ideal F){
     // added_N = Simplify_DisEqu(added_N + Irr_N, new_E);
     // new_E = Simplify_Equ(new_E, out_N);
     for(i=1; i<=size(added_N); i++){
-        list CGS = ff_idealcgs_main(q, new_E + added_N[i], new_N + tempN, F);
+        list CGS = ff_idealcgs_main(q, new_E + added_N[i], tempN, F);
         tempN[size(tempN)+1] = added_N[i];
+        print("CGS");
+        CGS;
 
         if(size(CGS)){
             for(j=1; j<=size(CGS); j++){
@@ -735,13 +859,14 @@ static proc generic_MIS(ideal P){
     int i, j, k;
     list XuAmU, U, XmUx, Ux, AmUa, Ua;
     list MIS = indepSet(P, 1);
-    MIS;
+    print(MIS);
     for(i = 1; i<=size(MIS); i++){
         int flag = 0;
         intvec u = MIS[i];
         if(size(MIS) == 1){
             flag = 1;
         }else{
+            para_leadmon(P);
             list lm_MIS = indepSet(para_leadmon(P), 1);
             for(j = 1; j<=size(lm_MIS); j++){
                 intvec v = lm_MIS[j];
@@ -813,7 +938,6 @@ static proc Shape_Form(ideal F, list U, list XmUx, list #){
             ideal F_mdb;
             F_mdb, redundant = MDBasis(imap(RingExt, F));
             kill(redundant);
-            F_mdb;
             ideal XruU_all = imap(RingExt, XruU);
             for(j = 1; j<=size(F_mdb); j++){
                 if(j != minPoly_index){
@@ -850,8 +974,6 @@ static proc Shape_Form(ideal F, list U, list XmUx, list #){
     for(i = 1; i<=size(U_shape); i++){
         ZuU[size(ZuU)+1] = U_shape[i];
     }
-
-    
     //when the degree of the minimal monic generator of the eliminated ideal is too large, the number of trials shall be enlarged. c.f. [Weispfenning, page 380], Algo.NORMPOS.
     if(q){
         int max_counter = q^size(XmUx_shape);
@@ -920,7 +1042,11 @@ static proc Shape_Form(ideal F, list U, list XmUx, list #){
         intvec EV;
         list ev_N;
         EV, ev_N = Exponent_Vector(q, F, U, XmUx);
+        print("exponet vector");
+        EV;
         ideal sc_F = Separable_Closure(q, EV, U, XmUx, F);
+        print("separable closure");
+        sc_F;
 
         ideal reP;
         poly reminPoly;
@@ -963,11 +1089,13 @@ static proc Exponent_Vector(int q, ideal F, list U, list XmUx){
         poly lc_F;
         ideal temp_MDB;
         temp_MDB, lc_F = MDBasis(imap(RingExt, elim_F));
+        list temp_Irr = ff_Uni_IrrCheck(q, temp_MDB[1]);
 
         setring(RingExt);
         ideal MDB = imap(RingAll, temp_MDB);
         MDB;
         ev_N[size(ev_N)+1] = imap(RingAll, lc_F);
+        ev_N = ev_N + imap(RingAll, temp_Irr);
 
         poly sc_f = MDB[1];
         int e = 1;
@@ -991,11 +1119,10 @@ static proc Exponent_Vector(int q, ideal F, list U, list XmUx){
             }
         }
     }
-    EV;
     return(EV, ev_N);
 }
 
-static proc Separable_Closure(int q, intvec EV, list U, list XmUx, ideal F){
+static proc Separable_Closure(int q, intvec EV, list U, list XmUx, ideal F, list #){
     int i, j;
     list Dummy;
     int nY = size(EV);
@@ -1033,14 +1160,11 @@ static proc Separable_Closure(int q, intvec EV, list U, list XmUx, ideal F){
     }
 
     ideal G = groebner(imap(RingExt, F) + Frobenius);
-    G;
     
     G = eliminate(G, p_elim);
     for(i = 1; i<=size(EV); i++){
         G = subst(G, string2poly(Dummy_Frob[i]), XmUx_Frob[i]);
     }
-    print("Separable Closure");
-    G;
 
     setring(RingExt);
     return(imap(RingFrob, G));
@@ -1157,6 +1281,58 @@ static proc def_SeparateRing(string Name, list U, list X){
     string Ord = baseOrd[1, 2];
 
     string cmd = "ring " + Name + " = (" + sCoef + "), (" + sX + "), " + Ord +";";
+    return(cmd);
+}
+
+static proc def_Separate2BlockRing(string Name, list T, list X, list A, list #){
+    // ring Name = char(RingAll, T), (X, A), (ord(basering), ord(basering)).
+    string sT = list2string(T);
+    string sA = list2string(A);
+    string sX = list2string(X);
+
+    string sCoef = charstr(RingAll);
+    if(size(T)>0){
+        sCoef = sCoef + ",";
+        sCoef = sCoef + sT;
+    }
+
+    string allvars = "";
+
+    if(size(X)>0){
+        allvars = sX;
+    }
+    if(size(A)>0){
+        if(size(allvars)>0){
+            allvars = allvars + ",";
+        }
+        allvars = allvars + sA;
+    }
+
+    if(size(#)){
+        string tm = #[1];
+    }else{
+        string baseOrd = ordstr(basering);
+        string tm = baseOrd[1, 2];
+    }
+
+    if(tm == "wp" || tm == "Wp"){
+        //Need to preserve the weight of variables.
+    }else{
+        string Ord = "(";
+        if(size(X)>0){
+            Ord = Ord + tm + "(" + string(size(X)) + ")";
+        }
+        if(size(A)>0){
+            if(Ord != "("){
+                Ord = Ord + ",";
+            }
+            Ord = Ord + tm + "(" + string(size(A)) + ")";
+        }
+        Ord = Ord + ")";
+    }
+
+    string cmd ="ring " + Name + " = (" + sCoef + "), (" + allvars + "), " + Ord + ";";
+
     return(cmd);
 }
 
@@ -1369,7 +1545,9 @@ proc ff_idealcgs_main(int q, ideal E, list N, ideal F){
             continue;
         }
         if (ff_Check_Consistence(q, new_E, new_N + list(tempP))){
-            Z = Z + list(list(new_E, new_N + list(tempP), ideal(1)));
+            list out_N = Simplify_DisEqu(new_N + list(tempP), new_E);
+            ideal out_E = Simplify_Equ(new_E, out_N);
+            Z = Z + list(list(out_E, out_N, ideal(1)));
         }
         new_E = groebner(new_E + tempP);
     }
@@ -1382,7 +1560,9 @@ proc ff_idealcgs_main(int q, ideal E, list N, ideal F){
     }
 
     if(ff_Check_Consistence(q, new_E, new_N + LCFactors)){
-        Z[size(Z)+1] = list(new_E, new_N + LCFactors, Gm);
+        list out_N = Simplify_DisEqu(new_N + LCFactors, new_E);
+        ideal out_E = Simplify_Equ(new_E, out_N);
+        Z[size(Z)+1] = list(out_E, out_N, Gm);
     }
 
     //recursive calling
@@ -1419,7 +1599,7 @@ static proc ff_Check_Consistence(int q, ideal E, list N){
     return(0);
 }
 
-proc ff_IrrCheck(int q, poly f){
+static proc ff_IrrCheck(int q, poly f){
     int i, j;
 
     ideal indepof_f = variables(f);
@@ -1457,17 +1637,22 @@ static proc ff_Uni_IrrCheck(int q, poly f){
     ideal F = f;
     poly minVar = variables(f)[1];
     list N;
-    for(i=1; i<=d-1; i++){
-        ideal F = f, minVar^((q)^(i)) - minVar;
-        ideal G = groebner(F);
-        G;
-        ideal Gr = separate_ParaVar(G, 1);
-        N = N + ideal2list(Gr);
+    int m = max((d-1) div 2, 1);
+    for(i=1; i<=m; i++){
+        if(2*i <= m){
+            i++;
+            continue;
+        }else{
+            ideal F = f, minVar^((q)^(i)) - minVar;
+            ideal G = groebner(F);
+            ideal Gr = separate_ParaVar(G, 1);
+            N = N + ideal2list(Gr);
+        }
     }
     return(N);
 }
 
-static proc para_leadmon(ideal P){
+proc para_leadmon(ideal P){
     if(!size(P)){
         return(ideal());
     }
